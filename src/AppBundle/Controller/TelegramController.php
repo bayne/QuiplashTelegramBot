@@ -27,9 +27,7 @@ class TelegramController extends Controller
     public function listenAction(Request $request)
     {
         DriverManager::loadDriver(TelegramDriver::class);
-        $cache = new SymfonyCache(
-            new PdoAdapter($this->getDoctrine()->getConnection())
-        );
+        $cache = new SymfonyCache(new PdoAdapter($this->getDoctrine()->getConnection()));
         $botman = BotManFactory::create(
             [
                 'telegram' => [
