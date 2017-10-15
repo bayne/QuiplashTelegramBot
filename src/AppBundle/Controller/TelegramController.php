@@ -30,12 +30,15 @@ class TelegramController extends Controller
         $cache = new SymfonyCache(
             new PdoAdapter($this->getDoctrine()->getConnection())
         );
-        $botman = BotManFactory::create([
-            'telegram' => [
-                'token' => $this->getParameter('telegram_token')
-            ],
-            $cache
-        ]);
+        $botman = BotManFactory::create(
+            [
+                'telegram' => [
+                    'token' => $this->getParameter('telegram_token')
+                ],
+            ], 
+            $cache,
+            $request
+        );
 
         $botman->hears('play', function (BotMan $bot) {
             $bot->startConversation(new Game());
