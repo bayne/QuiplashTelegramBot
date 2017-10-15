@@ -6,10 +6,11 @@ namespace AppBundle\Controller;
 use AppBundle\Conversation\Game;
 use BotMan\BotMan\BotMan;
 use BotMan\BotMan\BotManFactory;
-use BotMan\BotMan\Cache\RedisCache;
+use BotMan\BotMan\Cache\SymfonyCache;
 use BotMan\BotMan\Drivers\DriverManager;
 use BotMan\Drivers\Telegram\TelegramDriver;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\Cache\Adapter\PdoAdapter;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -26,10 +27,8 @@ class TelegramController extends Controller
     public function listenAction(Request $request)
     {
         DriverManager::loadDriver(TelegramDriver::class);
-        $cache = new RedisCache(
-            $this->getParameter('redis_host'),
-            $this->getParameter('redis_port'),
-            $this->getParameter('redis_password')
+        $cache = new SymfonyCache(
+            new PdoAdapter($this->getDoctrine()->getConnection())
         );
         $botman = BotManFactory::create([
             'telegram' => [
