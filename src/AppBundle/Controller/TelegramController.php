@@ -15,15 +15,18 @@ use Symfony\Component\Routing\Annotation\Route;
 class TelegramController extends Controller
 {
     /**
-     * @Route(name="telegramListen", path="/telegram")
-     * 
+     * @Route("/telegram", name="telegramListen")
+     *
      * @param Request $request
+     * @return Response
      */
     public function listenAction(Request $request)
     {
         DriverManager::loadDriver(TelegramDriver::class);
         $botman = BotManFactory::create([
-            'telegram' => $this->getParameter('telegram_token')
+            'telegram' => [
+                'token' => $this->getParameter('telegram_token')
+            ]
         ]);
 
         $botman->hears('test', function (BotMan $bot) {
