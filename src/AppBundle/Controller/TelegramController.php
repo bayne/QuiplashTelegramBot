@@ -3,6 +3,7 @@
 namespace AppBundle\Controller;
 
 
+use AppBundle\Conversation\Game;
 use BotMan\BotMan\BotMan;
 use BotMan\BotMan\BotManFactory;
 use BotMan\BotMan\Drivers\DriverManager;
@@ -29,8 +30,8 @@ class TelegramController extends Controller
             ]
         ]);
 
-        $botman->hears('test', function (BotMan $bot) {
-            $bot->reply('Yay!');
+        $botman->hears('play', function (BotMan $bot) {
+            $bot->startConversation(new Game());
         });
 
         $botman->listen();
