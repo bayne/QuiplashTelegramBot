@@ -50,7 +50,7 @@ class TelegramController extends Controller
             $this->join($botMan, $chatGroup, $botMan->getMessage()->getSender());
         });
 
-        $botman->hears('/new', function (BotMan $bot) {
+        $botman->hears('/new(.*)', function (BotMan $bot) {
             if ($bot->getMessage()->getSender() === $bot->getMessage()->getRecipient()) {
                 return;
             }
@@ -71,7 +71,7 @@ class TelegramController extends Controller
             $bot->say('Starting a new game! Other players, click this then press start to join: http://t.me/QuiplashModeratorBot?start='.$encoded, $bot->getMessage()->getRecipient());
         });
         
-        $botman->hears('/end', function (BotMan $bot) {
+        $botman->hears('/end(.*)', function (BotMan $bot) {
             if ($bot->getMessage()->getSender() === $bot->getMessage()->getRecipient()) {
                 return;
             }
@@ -97,7 +97,7 @@ class TelegramController extends Controller
             
         });
 
-        $botman->hears('/join', function (BotMan $botMan) {
+        $botman->hears('/join(.*)', function (BotMan $botMan) {
             if ($botMan->getMessage()->getSender() === $botMan->getMessage()->getRecipient()) {
                 return;
             }
@@ -108,7 +108,7 @@ class TelegramController extends Controller
             
         });
 
-        $botman->hears('/begin', function (BotMan $botMan) {
+        $botman->hears('/begin(.*)', function (BotMan $botMan) {
             if ($botMan->getMessage()->getSender() === $botMan->getMessage()->getRecipient()) {
                 return;
             }
