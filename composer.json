@@ -19,11 +19,18 @@
             "vendor/symfony/symfony/src/Symfony/Component/VarDumper/Resources/functions/dump.php"
         ]
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/bayne/driver-telegram"
+        }
+    ],
     "require": {
         "php": ">=5.5.9",
         "botman/botman": "^2.1",
-        "botman/driver-telegram": "^1.1",
+        "botman/driver-telegram": "dev-master",
         "doctrine/doctrine-bundle": "^1.6",
+        "doctrine/doctrine-migrations-bundle": "^1.2",
         "doctrine/orm": "^2.5",
         "incenteev/composer-parameter-handler": "^2.0",
         "sensio/distribution-bundle": "^5.0.19",
