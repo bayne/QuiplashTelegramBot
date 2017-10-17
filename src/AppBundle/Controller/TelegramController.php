@@ -68,7 +68,7 @@ class TelegramController extends Controller
             
             $this->getDoctrine()->getManager()->persist($game);
             $encoded = base64_encode($bot->getMessage()->getRecipient());
-            $bot->say('Starting a new game! Other players, click this then press start to join: http://t.me/WittyWilmaBot?start='.$encoded, $bot->getMessage()->getRecipient());
+            $bot->say('Starting a new game! Other players, click this then press start to join: http://t.me/QuiplashModeratorBot?start='.$encoded, $bot->getMessage()->getRecipient());
         });
         
         $botman->hears('/end', function (BotMan $bot) {
