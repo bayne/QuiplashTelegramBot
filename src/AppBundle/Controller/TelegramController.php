@@ -137,11 +137,38 @@ class TelegramController extends Controller
 
             if ($message->getSender() === $game->getHost()->getId()) {
 
-                $players = $game->getPlayers()->toArray();
-                shuffle($players);
-                $players1 = array_chunk($players, 2);
-                shuffle($players);
-                $players2 = array_chunk($players, 2);
+                $pairPlayers = function (Entity\Game $game) {
+                    $players1 = [];
+                    foreach ($game->getPlayers() as $currentPlayer) {
+                        $otherPlayers = array_filter(
+                            $game->getPlayers(),
+                            function (Entity\Player $player) use ($currentPlayer) {
+                                return $player->getId() !== $currentPlayer->getId();
+                            }
+                        );
+
+                        shuffle($otherPlayers);
+
+                        while (!empty($otherPlayers)) {
+                            $otherPlayer = array_pop($otherPlayers);
+                            $keys = [
+                                $currentPlayer->getId(),
+                                $otherPlayer->getId()
+                            ];
+                            
+                            sort($keys);
+                            
+                            $keyHash = implode('-', $keys);
+                            
+                            $players1[$keyHash] = [$currentPlayer, $otherPlayer];
+                        }
+                    }
+                    
+                    return $players1;
+                };
+                
+                $players1 = $pairPlayers($game);
+                $players2 = $pairPlayers($game);
                 
                 $questions = $this
                     ->getDoctrine()
