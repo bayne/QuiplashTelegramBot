@@ -120,8 +120,8 @@ class TelegramController extends Controller
                 return;
             }
             
-            if ($game->getPlayers()->count() < 2) {
-                $botMan->reply('You need at least two players before the game can start');
+            if ($game->getPlayers()->count() < 3) {
+                $botMan->reply('You need at least three players before the game can start');
                 return;
             }
 
@@ -230,11 +230,12 @@ class TelegramController extends Controller
             }
 
         });
+        
+        $botman->hears('/vote {response}', function (BotMan $botMan, $response) {
+            $this->gatherVotes($botMan, $response);
+        });
 
         $botman->fallback(function (BotMan $botMan) {
-            if ($botMan->getMessage()->getSender() !== $botMan->getMessage()->getRecipient()) {
-                return $this->gatherVotes($botMan);
-            }
             $message = $botMan->getMessage();
             if ($message->isFromBot()) {
                 return;
@@ -287,25 +288,22 @@ class TelegramController extends Controller
         $this->getDoctrine()->getManager()->persist($game);
         $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
 
-        /** @var Response $response */
-        $response = $botMan->sendRequest(
-            'sendMessage',
-            [
-                'chat_id' => $game->getChatGroup(),
-                'text' => "The prompt: ".'"'.$question->getText().'"',
-                'reply_markup' => json_encode([
-                    'one_time_keyboard' => true,
-                    'keyboard' => array_values(array_map(
-                        function (Entity\Answer $answer) use ($questionNumber) {
-                            return [
-                                $answer->getResponse()
-                            ];
-                        },
-                        $answers
-                    ))
-                ])
-            ]
-        );
+        $botMan->say("The prompt: ".'"'.$question->getText().'"', $game->getChatGroup());
+        $botMan->say("Look at your private messages and choose the best answer", $game->getChatGroup());
+
+        foreach ($game->getPlayers() as $player) {
+            
+            $prompt = Outgoing\Question::create("Choose the best answer to the following prompt: ".'"'.$question->getText().'"');
+            $prompt->addButtons(
+                array_map(
+                    function (Entity\Answer $answer) use ($questionNumber) {
+                        return Outgoing\Actions\Button::create($answer->getResponse())->value("/vote {$answer->getResponse()}");
+                    },
+                    $answers
+                )
+            );
+            $botMan->say($prompt, $player->getId());
+        }
     }
     
     private function join(BotMan $botMan, $chatGroup, $senderId)
@@ -329,7 +327,7 @@ class TelegramController extends Controller
         }
     }
     
-    private function gatherVotes(BotMan $botMan)
+    private function gatherVotes(BotMan $botMan, $response)
     {
         $message = $botMan->getMessage();
         $player = $this->getDoctrine()->getRepository(Entity\Player::class)->find($message->getSender());
@@ -344,7 +342,7 @@ class TelegramController extends Controller
         }
 
         $answer = $this->getDoctrine()->getRepository(Entity\Answer::class)->findOneBy([
-            'response' => $message->getText(),
+            'response' => $response,
             'game' => $game,
             'question' => $game->getCurrentQuestion()
         ]);
@@ -369,6 +367,8 @@ class TelegramController extends Controller
         $this->getDoctrine()->getManager()->persist($vote);
         $this->getDoctrine()->getManager()->flush();
         $this->getDoctrine()->getManager()->clear();
+        
+        $botMan->say($player->getName().' voted', $game->getChatGroup());
 
         $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES);
 
