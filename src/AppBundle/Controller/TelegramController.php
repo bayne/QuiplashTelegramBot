@@ -69,6 +69,7 @@ class TelegramController extends Controller
             $this->getDoctrine()->getManager()->persist($game);
             $encoded = base64_encode($bot->getMessage()->getRecipient());
             $bot->say('Starting a new game! Other players, click this then press start to join: http://t.me/QuiplashModeratorBot?start='.$encoded, $bot->getMessage()->getRecipient());
+            $bot->reply('Once everyone has joined, the host must type /begin to start the game');
         });
         
         $botman->hears('/end(.*)', function (BotMan $bot) {
@@ -94,17 +95,6 @@ class TelegramController extends Controller
             } else {
                 $bot->say('Only the host can end the game', $bot->getMessage()->getRecipient());
             }
-            
-        });
-
-        $botman->hears('/join(.*)', function (BotMan $botMan) {
-            if ($botMan->getMessage()->getSender() === $botMan->getMessage()->getRecipient()) {
-                return;
-            }
-            
-            $message = $botMan->getMessage();
-
-            $this->join($botMan, $message->getRecipient(), $message->getSender());
             
         });
 
@@ -139,18 +129,32 @@ class TelegramController extends Controller
 
                 $pairPlayers = function (Entity\Game $game) {
                     $players1 = [];
+                    $counts = [];
+                    
+                    foreach ($game->getPlayers() as $player) {
+                        $counts[$player->getId()] = 0;
+                    }
+                    
+                    unset($player);
+                    
                     foreach ($game->getPlayers() as $currentPlayer) {
-                        $otherPlayers = array_filter(
-                            $game->getPlayers(),
-                            function (Entity\Player $player) use ($currentPlayer) {
-                                return $player->getId() !== $currentPlayer->getId();
-                            }
-                        );
+                        $otherPlayers = $game->getPlayers()->filter(function (Entity\Player $player) use ($currentPlayer) {
+                            return $player->getId() !== $currentPlayer->getId();
+                        });
+                        
+                        $otherPlayers = $otherPlayers->toArray();
 
                         shuffle($otherPlayers);
 
                         while (!empty($otherPlayers)) {
                             $otherPlayer = array_pop($otherPlayers);
+                            if ($counts[$currentPlayer->getId()] >= 2) {
+                                continue;
+                            }
+                            if ($counts[$otherPlayer->getId()] >= 2) {
+                                continue;
+                            }
+                            
                             $keys = [
                                 $currentPlayer->getId(),
                                 $otherPlayer->getId()
@@ -161,19 +165,20 @@ class TelegramController extends Controller
                             $keyHash = implode('-', $keys);
                             
                             $players1[$keyHash] = [$currentPlayer, $otherPlayer];
+                            $counts[$currentPlayer->getId()] += 1;
+                            $counts[$otherPlayer->getId()] += 1;
                         }
                     }
                     
                     return $players1;
                 };
                 
-                $players1 = $pairPlayers($game);
-                $players2 = $pairPlayers($game);
+                $playerPairs = $pairPlayers($game);
                 
                 $questions = $this
                     ->getDoctrine()
                     ->getRepository(Entity\Question::class)
-                    ->generateQuestions(count($players1) + count($players2))
+                    ->generateQuestions(count($playerPairs))
                 ;
 
                 foreach ($questions as $question) {
@@ -184,7 +189,8 @@ class TelegramController extends Controller
                 
                 $questionsCollection = $game->getQuestions();
                 
-                foreach ($players1 as $i => list($player1, $player2)) {
+                $alreadyQuestioned = [];
+                foreach ($playerPairs as $i => list($player1, $player2)) {
                     $question = $questionsCollection->current();
                     $questionsCollection->next();
                     $answer = new Entity\Answer(
@@ -203,34 +209,22 @@ class TelegramController extends Controller
 
                     $this->getDoctrine()->getManager()->persist($answer);
                     
-                    $botMan->say($question->getText(), $player1->getId());
-                    $botMan->say($question->getText(), $player2->getId());
-                }
-                
-                foreach ($players2 as $i => list($player1, $player2)) {
-                    $question = $questionsCollection->current();
-                    $questionsCollection->next();
-                    $answer = new Entity\Answer(
-                        $player1,
-                        $question,
-                        $game
-                    );
 
-                    $this->getDoctrine()->getManager()->persist($answer);
+                    if (!in_array($player1->getId(), $alreadyQuestioned)) {
+                        $botMan->say($question->getText(), $player1->getId());
+                    }
+                    if (!in_array($player2->getId(), $alreadyQuestioned)) {
+                        $botMan->say($question->getText(), $player2->getId());
+                    }
                     
-                    $answer = new Entity\Answer(
-                        $player2,
-                        $question,
-                        $game
-                    );
-
-                    $this->getDoctrine()->getManager()->persist($answer);
+                    $alreadyQuestioned[] = $player1->getId();
+                    $alreadyQuestioned[] = $player2->getId();
                 }
                 
                 $game->setState(Entity\Game::GATHER_ANSWERS);
                 $this->getDoctrine()->getManager()->persist($game);
 
-                $botMan->say('Game has begun! I sent each of a prompt..', $botMan->getMessage()->getRecipient());
+                $botMan->say('Game has begun! I sent each of you a prompt..', $botMan->getMessage()->getRecipient());
             } else {
                 $botMan->say('Only the host can begin the game', $botMan->getMessage()->getRecipient());
             }
@@ -298,7 +292,7 @@ class TelegramController extends Controller
             'sendMessage',
             [
                 'chat_id' => $game->getChatGroup(),
-                'text' => $question->getText(),
+                'text' => "The prompt: ".'"'.$question->getText().'"',
                 'reply_markup' => json_encode([
                     'one_time_keyboard' => true,
                     'keyboard' => array_values(array_map(
