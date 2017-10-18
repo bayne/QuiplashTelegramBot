@@ -70,6 +70,8 @@ class TelegramController extends Controller
             $encoded = base64_encode($bot->getMessage()->getRecipient());
             $bot->say('Starting a new game! Other players, click this then press start to join: http://t.me/QuiplashModeratorBot?start='.$encoded, $bot->getMessage()->getRecipient());
             $bot->reply('Once everyone has joined, the host must type /begin to start the game');
+
+            $this->join($bot, $bot->getMessage()->getRecipient(), $senderId);
         });
         
         $botman->hears('/end(.*)', function (BotMan $bot) {
