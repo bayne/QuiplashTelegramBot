@@ -44,7 +44,7 @@ class TelegramController extends Controller
         $middleware = new MiddlewarePersister($this->getDoctrine()->getManager());
         
         $botman->middleware->sending($middleware);
-        
+
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
             $this->getLogger()->info('joined');
             $chatGroup = base64_decode($chatGroup);

@@ -8,6 +8,7 @@ use BotMan\BotMan\BotMan;
 use BotMan\BotMan\Interfaces\MiddlewareInterface;
 use BotMan\BotMan\Messages\Incoming\IncomingMessage;
 use Doctrine\ORM\EntityManager;
+use Psr\Log\LoggerInterface;
 
 class MiddlewarePersister implements MiddlewareInterface
 {
@@ -15,15 +16,22 @@ class MiddlewarePersister implements MiddlewareInterface
      * @var EntityManager
      */
     private $entityManager;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * MiddlewarePersister constructor.
      * @param EntityManager $entityManager
+     * @param LoggerInterface $logger
      */
     public function __construct(
-        EntityManager $entityManager
+        EntityManager $entityManager,
+        LoggerInterface $logger
     ) {
         $this->entityManager = $entityManager;
+        $this->logger = $logger;
     }
 
 
@@ -113,9 +121,15 @@ class MiddlewarePersister implements MiddlewareInterface
             /** @var Message $message */
             $message = reset($messages);
             if (time() - $message->getCurrentTime()->getTimestamp() > 30) {
-                return $next($payload);
+                $result = $next($payload);
+                $this->logger((string) $result);
+                return $result;
             }
             
+        } else {
+            $result = $next($payload);
+            $this->logger((string) $result);
+            return $result;
         }
         
     }
