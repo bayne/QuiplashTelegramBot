@@ -41,9 +41,9 @@ class TelegramController extends Controller
             $request
         );
 
-        $middleware = new MiddlewarePersister($this->getDoctrine()->getManager(), $this->getLogger());
-        
-        $botman->middleware->sending($middleware);
+//        $middleware = new MiddlewarePersister($this->getDoctrine()->getManager(), $this->getLogger());
+//        
+//        $botman->middleware->sending($middleware);
 
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
             $this->getLogger()->info('joined');
