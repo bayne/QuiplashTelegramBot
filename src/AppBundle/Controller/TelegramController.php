@@ -239,6 +239,11 @@ class TelegramController extends Controller
 
         $botman->fallback(function (BotMan $botMan) {
             $message = $botMan->getMessage();
+            
+            if ($botMan->getMessage()->getSender() !== $botMan->getMessage()->getRecipient()) {
+                return;
+            }
+            
             if ($message->isFromBot()) {
                 return;
             }
