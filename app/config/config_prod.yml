@@ -11,11 +11,6 @@ imports:
 monolog:
     handlers:
         main:
-            type: fingers_crossed
-            action_level: error
-            handler: nested
-        nested:
             type: error_log
-        console:
-            type: console
-            process_psr_3_messages: false
+            level: debug
+            channels: ['!event']
