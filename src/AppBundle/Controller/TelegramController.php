@@ -262,6 +262,7 @@ class TelegramController extends Controller
             }
             
             if ($game->getState() === Entity\Game::END) {
+                $scoreBoard = $game->getScoreBoard();
                 $message = "The game has ended:\n";
                 $message .= 'Winner: '.reset($scoreBoard)['player']->getName();
                 foreach ($scoreBoard as $score) {
