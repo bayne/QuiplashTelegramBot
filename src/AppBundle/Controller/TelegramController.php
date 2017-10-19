@@ -11,6 +11,7 @@ use BotMan\BotMan\BotManFactory;
 use BotMan\BotMan\Cache\SymfonyCache;
 use BotMan\BotMan\Drivers\DriverManager;
 use BotMan\Drivers\Telegram\TelegramDriver;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Cache\Adapter\PdoAdapter;
 use Symfony\Component\HttpFoundation\Request;
@@ -45,6 +46,7 @@ class TelegramController extends Controller
         $botman->middleware->sending($middleware);
         
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
+            $this->getLogger()->info('joined');
             $chatGroup = base64_decode($chatGroup);
             if ($botMan->getMessage()->getSender() !== $botMan->getMessage()->getRecipient()) {
                 return;
@@ -57,6 +59,7 @@ class TelegramController extends Controller
 
         $botman->hears('/new(.*)', function (BotMan $bot) {
             if ($bot->getMessage()->getSender() === $bot->getMessage()->getRecipient()) {
+                $this->getLogger()->info('sent to wrong group');
                 return;
             }
             
@@ -66,6 +69,7 @@ class TelegramController extends Controller
             /** @var Entity\Game $game */
             $games = $this->getDoctrine()->getRepository(Entity\Game::class)->findRunningGames($bot->getMessage()->getRecipient());
             if (count($games) > 0) {
+                $this->getLogger()->info('no games');
                 return;
             }
 
@@ -80,6 +84,7 @@ class TelegramController extends Controller
         
         $botman->hears('/end(.*)', function (BotMan $bot) {
             if ($bot->getMessage()->getSender() === $bot->getMessage()->getRecipient()) {
+                $this->getLogger()->info('cannot end from here');
                 return;
             }
             
@@ -89,6 +94,7 @@ class TelegramController extends Controller
             /** @var Entity\Game $game */
             $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($host);
             if ($game === null) {
+                $this->getLogger()->info('missing game to end');
                 return;
             }
             
@@ -106,6 +112,7 @@ class TelegramController extends Controller
 
         $botman->hears('/begin(.*)', function (BotMan $botMan) {
             if ($botMan->getMessage()->getSender() === $botMan->getMessage()->getRecipient()) {
+                $this->getLogger()->info('game cannot begin from here');
                 return;
             }
             
@@ -123,6 +130,7 @@ class TelegramController extends Controller
                 ]
             );
             if ($game === null) {
+                $this->getLogger()->info('no game to begin');
                 return;
             }
             
@@ -286,10 +294,12 @@ class TelegramController extends Controller
             $message = $botMan->getMessage();
             
             if ($botMan->getMessage()->getSender() !== $botMan->getMessage()->getRecipient()) {
+                $this->getLogger()->info('freeform only in private');
                 return;
             }
             
             if ($message->isFromBot()) {
+                $this->getLogger()->info('ignore from bot');
                 return;
             }
 
@@ -297,6 +307,7 @@ class TelegramController extends Controller
             /** @var Entity\Game $game */
             $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS);
             if ($game === null) {
+                $this->getLogger()->info('misisng current game for freeform');
                 return;
             }
 
@@ -312,6 +323,7 @@ class TelegramController extends Controller
 
                     $this->vote(0, $game, $botMan);
                 }
+                $this->getLogger()->info('misisng answer to respond');
                 return;
             }
             
@@ -369,6 +381,7 @@ class TelegramController extends Controller
         $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findOneBy(['chatGroup' => $chatGroup, 'state' => Entity\Game::GATHER_PLAYERS]);
 
         if ($game === null) {
+            $this->getLogger()->info('cannot join missing game');
             return;
         }
 
@@ -386,10 +399,12 @@ class TelegramController extends Controller
         /** @var Entity\Game $game */
         $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES);
         if ($game === null) {
+            $this->getLogger()->info('no game to gather votes');
             return;
         }
 
         if ($game->getState() !== Entity\Game::GATHER_VOTES) {
+            $this->getLogger()->info('game not in gather votes');
             return;
         }
 
@@ -466,5 +481,13 @@ class TelegramController extends Controller
     {
         $encoded = base64_encode($chatGroup);
         return 'http://t.me/QuiplashModeratorBot?start='.$encoded;       
+    }
+
+    /**
+     * @return LoggerInterface
+     */
+    private function getLogger()
+    {
+        return $this->get('logger');
     }
 }
