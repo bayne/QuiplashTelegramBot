@@ -41,7 +41,7 @@ class TelegramController extends Controller
             $request
         );
 
-        $middleware = new MiddlewarePersister($this->getDoctrine()->getManager());
+        $middleware = new MiddlewarePersister($this->getDoctrine()->getManager(), $this->getLogger());
         
         $botman->middleware->sending($middleware);
 
