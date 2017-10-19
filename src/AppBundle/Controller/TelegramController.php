@@ -213,9 +213,11 @@ class TelegramController extends Controller
                     
 
                     if (!in_array($player1->getId(), $alreadyQuestioned)) {
+                        $botMan->say('Reply to the following prompt with something witty: ', $player1->getId());
                         $botMan->say($question->getText(), $player1->getId());
                     }
                     if (!in_array($player2->getId(), $alreadyQuestioned)) {
+                        $botMan->say('Reply to the following prompt with something witty: ', $player1->getId());
                         $botMan->say($question->getText(), $player2->getId());
                     }
                     
