@@ -2,6 +2,7 @@
 
 namespace AppBundle\Controller;
 
+use AppBundle\MiddlewarePersister;
 use BotMan\BotMan\Messages\Incoming;
 use BotMan\BotMan\Messages\Outgoing;
 use AppBundle\Entity;
@@ -38,6 +39,10 @@ class TelegramController extends Controller
             $cache,
             $request
         );
+
+        $middleware = new MiddlewarePersister($this->getDoctrine()->getManager());
+        
+        $botman->middleware->sending($middleware);
         
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
             $chatGroup = base64_decode($chatGroup);
