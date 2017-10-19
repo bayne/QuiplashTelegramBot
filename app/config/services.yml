@@ -28,6 +28,10 @@ services:
         resource: '../../src/AppBundle/Controller'
         public: true
         tags: ['controller.service_arguments']
+    exception_listener:
+        class: AppBundle\ExceptionListener
+        tags:
+          - { name: kernel.event_listener, event: kernel.exception }
 
     # add more services, or override services that need manual wiring
     # AppBundle\Service\ExampleService:
