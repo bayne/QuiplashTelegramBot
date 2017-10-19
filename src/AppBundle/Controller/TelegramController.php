@@ -415,7 +415,7 @@ class TelegramController extends Controller
                 $roundResults .= "\n".$answer->getResponse().' ('.$answer->getPlayer()->getName().' +'.count($answer->getVotes()).')';
             }
 
-            $botMan->reply($roundResults);
+            $botMan->say($roundResults, $game->getChatGroup());
 
             $this->vote($questionNumber+1, $game, $botMan);
         }
