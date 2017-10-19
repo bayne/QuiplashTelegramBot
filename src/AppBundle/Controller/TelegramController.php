@@ -400,7 +400,7 @@ class TelegramController extends Controller
                     $gameOver .= "\n".$score['player']->getName().': '.$score['points']." pts";
                 }
 
-                $botMan->reply($gameOver);
+                $botMan->say($gameOver, $game->getChatGroup());
 
                 return;
             }
