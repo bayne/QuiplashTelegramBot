@@ -237,6 +237,31 @@ class Game
         $this->questions = $questions;
         return $this;
     }
+    
+    public function getMissingPlayerVotes()
+    {
+        $votedPlayers = [];
+        foreach ($this->getAnswers() as $answer) {
+            if ($this->currentQuestion->getId() === $answer->getQuestion()->getId()) {
+                foreach ($answer->getVotes() as $vote) {
+                    $votedPlayers[] = $vote->getPlayer();
+                }
+            }
+        }
+        
+        $votedPlayersIds = array_map(function (Player $player) {
+            return $player->getId();
+        }, $votedPlayers);
+        
+        $notVotedPlayers = [];
+        foreach ($this->players as $player) {
+            if (!in_array($player->getId(), $votedPlayersIds)) {
+                $notVotedPlayers[] = $player;
+            }
+        }
+            
+        return $notVotedPlayers;
+    }
 
     public function votesAreTallied($questionNumber)
     {

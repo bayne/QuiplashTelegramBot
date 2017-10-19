@@ -83,7 +83,7 @@ class Answer
     }
 
     /**
-     * @return string
+     * @return Player
      */
     public function getPlayer()
     {

@@ -67,8 +67,7 @@ class TelegramController extends Controller
             $game = new Entity\Game($host, $bot->getMessage()->getRecipient());
             
             $this->getDoctrine()->getManager()->persist($game);
-            $encoded = base64_encode($bot->getMessage()->getRecipient());
-            $bot->say('Starting a new game! Other players, click this then press start to join: http://t.me/QuiplashModeratorBot?start='.$encoded, $bot->getMessage()->getRecipient());
+            $bot->say('Starting a new game! Other players, click this then press start to join: '.$this->getJoinLink($bot->getMessage()->getRecipient()), $bot->getMessage()->getRecipient());
             $bot->reply('Once everyone has joined, the host must type /begin to start the game');
 
             $this->join($bot, $bot->getMessage()->getRecipient(), $senderId);
@@ -235,6 +234,44 @@ class TelegramController extends Controller
 
         });
         
+        $botman->hears('/status(.*)', function (BotMan $botMan) {
+            $chatGroup = $botMan->getMessage()->getRecipient();
+            /** @var Entity\Game $game */
+            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findOneBy(['chatGroup' => $chatGroup]);
+            
+            $message = '';
+            
+            if ($game->getState() === Entity\Game::GATHER_PLAYERS) {
+                $message = 'The game is currently gathering players. Click the following link to join: '.$this->getJoinLink($chatGroup);
+            }
+            
+            if ($game->getState() === Entity\Game::GATHER_ANSWERS) {
+                $message = 'The game is currently gathering answers. The following players need to provides answers to their prompts:';
+                foreach ($game->getAnswers() as $answer) {
+                    if ($answer->isPending()) {
+                        $message .= "\n".$answer->getPlayer()->getName();
+                    }
+                }
+            }
+            
+            if ($game->getState() === Entity\Game::GATHER_VOTES) {
+                $message = 'The game is currently gathering votes. The following players need to vote on which answer they like the best:';
+                foreach ($game->getMissingPlayerVotes() as $player) {
+                    $message .= "\n".$player->getName();
+                }
+            }
+            
+            if ($game->getState() === Entity\Game::END) {
+                $message = "The game has ended:\n";
+                $message .= 'Winner: '.reset($scoreBoard)['player']->getName();
+                foreach ($scoreBoard as $score) {
+                    $message .= "\n".$score['player']->getName().': '.$score['points']." pts";
+                }
+            }
+
+            $botMan->say($message, $chatGroup);
+        });
+        
         $botman->hears('/vote {response}', function (BotMan $botMan, $response) {
             $this->gatherVotes($botMan, $response);
         });
@@ -296,9 +333,9 @@ class TelegramController extends Controller
         $game->setCurrentQuestion($question);
         $this->getDoctrine()->getManager()->persist($game);
         $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
-
-        $botMan->say("The prompt: ".'"'.$question->getText().'"', $game->getChatGroup());
-        $botMan->say("Look at your private messages and choose the best answer", $game->getChatGroup());
+        $prompt = "The prompt: ".'"'.$question->getText().'"'."\n";
+        $prompt .= "Look at your private messages and choose the best answer";
+        $botMan->say($prompt, $game->getChatGroup());
 
         foreach ($game->getPlayers() as $player) {
             
@@ -377,8 +414,6 @@ class TelegramController extends Controller
         $this->getDoctrine()->getManager()->flush();
         $this->getDoctrine()->getManager()->clear();
         
-        $botMan->say($player->getName().' voted', $game->getChatGroup());
-
         $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES);
 
         $questionNumber = 0;
@@ -419,5 +454,11 @@ class TelegramController extends Controller
 
             $this->vote($questionNumber+1, $game, $botMan);
         }
+    }
+    
+    public function getJoinLink($chatGroup)
+    {
+        $encoded = base64_encode($chatGroup);
+        return 'http://t.me/QuiplashModeratorBot?start='.$encoded;       
     }
 }
