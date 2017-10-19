@@ -250,10 +250,15 @@ class TelegramController extends Controller
         $botman->hears('/status(.*)', function (BotMan $botMan) {
             $chatGroup = $botMan->getMessage()->getRecipient();
             /** @var Entity\Game $game */
-            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findOneBy(['chatGroup' => $chatGroup]);
-            
+            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findBy(['chatGroup' => $chatGroup], ['id' => 'desc']);
+            if (count($game) > 0) {
+                $game = reset($game);
+            } else {
+                $botMan->say('There has been no games started in this chat', $chatGroup);
+            }
+
             $message = '';
-            
+
             if ($game->getState() === Entity\Game::GATHER_PLAYERS) {
                 $message = 'The game is currently gathering players. Click the following link to join: '.$this->getJoinLink($chatGroup);
             }
