@@ -250,7 +250,7 @@ class TelegramController extends Controller
                 return;
             }
 
-            $player = $this->getDoctrine()->getRepository(Entity\Player::class)->find($message->getSender());
+            $player = $this->getDoctrine()->getRepository(Entity\Player::class)->findOrCreate($message->getSender(), $botMan->getUser()->getFirstName());
             /** @var Entity\Game $game */
             $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS);
             if ($game === null) {
