@@ -47,8 +47,9 @@ class TelegramController extends Controller
                 return;
             }
             
-            $this->join($botMan, $chatGroup, $botMan->getMessage()->getSender());
-            $botMan->say('Hello! I will send you private messages here related to the game you are in. Keep a look out.', $botMan->getMessage()->getRecipient());
+            if ($this->join($botMan, $chatGroup, $botMan->getMessage()->getSender())) {
+                $botMan->say('Hello! I will send you private messages here related to the game you are in. Keep a look out.', $botMan->getMessage()->getRecipient());
+            }
         });
 
         $botman->hears('/new(.*)', function (BotMan $bot) {
@@ -78,10 +79,11 @@ class TelegramController extends Controller
             
             $this->getDoctrine()->getManager()->persist($game);
             $this->getDoctrine()->getManager()->flush();
-            $bot->say('Starting a new game! Other players, click this then press start to join: '.$this->getJoinLink($bot->getMessage()->getRecipient()), $bot->getMessage()->getRecipient());
-            $bot->reply('Once everyone has joined, the host must type /begin to start the game');
-
-            $this->join($bot, $bot->getMessage()->getRecipient(), $senderId);
+            
+            if ($this->join($bot, $bot->getMessage()->getRecipient(), $senderId)) {
+                $bot->say('Starting a new game! Other players, click this then press start to join: '.$this->getJoinLink($bot->getMessage()->getRecipient()), $bot->getMessage()->getRecipient());
+                $bot->reply('Once everyone has joined, the host must type /begin to start the game');    
+            }
         });
         
         $botman->hears('/end(.*)', function (BotMan $bot) {
@@ -397,7 +399,7 @@ class TelegramController extends Controller
         
         if (count($existingGames) > 0) {
             $botMan->reply('You are already in a different game!');
-            return;
+            return false;
         }
 
         /** @var Entity\Game $game */
@@ -405,7 +407,7 @@ class TelegramController extends Controller
 
         if ($game === null) {
             $this->getLogger()->info('cannot join missing game');
-            return;
+            return false;
         }
 
         if (false === $game->getPlayers()->contains($player)) {
@@ -413,6 +415,7 @@ class TelegramController extends Controller
             $this->getDoctrine()->getManager()->persist($game);
             $botMan->say($botMan->getUser()->getFirstName() . ' has joined the game!', $chatGroup);
         }
+        return true;
     }
     
     private function gatherVotes(BotMan $botMan, $response)
