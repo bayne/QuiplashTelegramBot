@@ -255,7 +255,7 @@ class Game
         
         $notVotedPlayers = [];
         foreach ($this->players as $player) {
-            if (!in_array($player->getId(), $votedPlayersIds)) {
+            if (!in_array($player->getId(), $votedPlayersIds) && !in_array($player->getId(), $notVotedPlayers)) {
                 $notVotedPlayers[] = $player;
             }
         }
