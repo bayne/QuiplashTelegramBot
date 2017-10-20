@@ -316,23 +316,26 @@ class TelegramController extends Controller
             $answer = $this->getDoctrine()->getRepository(Entity\Answer::class)->getNextForUser($player,$game);
             
             if ($answer === null) {
-                if ($game->allAnswersAreIn()) {
-
-                    $game->setState(Entity\Game::GATHER_VOTES);
-                    $this->getDoctrine()->getManager()->persist($game);
-                    
-                    $botMan->say('Now its time to vote on your favorite answers', $game->getChatGroup());
-
-                    $this->vote(0, $game, $botMan);
-                }
-                $this->getLogger()->info('misisng answer to respond');
                 return;
             }
             
             $answer->setResponse($message->getText());
             $this->getDoctrine()->getManager()->persist($answer);
-            
             $this->getDoctrine()->getManager()->flush();
+            $this->getDoctrine()->getManager()->clear();
+
+            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->find($game->getId());
+           
+            if ($game->allAnswersAreIn()) {
+                $game->setState(Entity\Game::GATHER_VOTES);
+                $this->getDoctrine()->getManager()->persist($game);
+
+                $botMan->say('Now its time to vote on your favorite answers', $game->getChatGroup());
+
+                $this->vote(0, $game, $botMan);
+                return;
+            }
+            $this->getLogger()->info('misisng answer to respond');
 
             /** @var Entity\Answer $answer */
             $answer = $this->getDoctrine()->getRepository(Entity\Answer::class)->getNextForUser($player, $game);
