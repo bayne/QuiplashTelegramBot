@@ -345,7 +345,7 @@ class Game
         });
         
         $voters = [];
-        foreach (array_diff($allPlayers, $answerers) as $id) {
+        foreach (array_diff($allPlayers->toArray(), $answerers->toArray()) as $id) {
             foreach ($this->players as $player) {
                 if ($player->getId() === $id) {
                     $voters[] = $player;
