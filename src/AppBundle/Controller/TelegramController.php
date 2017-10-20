@@ -47,7 +47,7 @@ class TelegramController extends Controller
                 return;
             }
             
-            $botMan->say('Hello! I will send you private messages here related to the games you are in. Keep a look out.', $botMan->getMessage()->getRecipient());
+            $botMan->say('Hello! I will send you private messages here related to the game you are in. Keep a look out.', $botMan->getMessage()->getRecipient());
             
             $this->join($botMan, $chatGroup, $botMan->getMessage()->getSender());
         });
@@ -59,16 +59,21 @@ class TelegramController extends Controller
             }
             
             $senderId = $bot->getMessage()->getSender();
-            /** @var Entity\Player $host */
-            $host = $this->getDoctrine()->getRepository(Entity\Player::class)->findOrCreate($senderId, $bot->getUser()->getFirstName());
+            /** @var Entity\Player $player */
+            $player = $this->getDoctrine()->getRepository(Entity\Player::class)->findOrCreate($senderId, $bot->getUser()->getFirstName());
             /** @var Entity\Game $game */
-            $games = $this->getDoctrine()->getRepository(Entity\Game::class)->findRunningGames($bot->getMessage()->getRecipient());
+            $games = array_merge(
+                [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS)],
+                $this->getDoctrine()->getRepository(Entity\Game::class)->findRunningGames($bot->getMessage()->getRecipient()),
+                [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)]
+            );
+            
             if (count($games) > 0) {
                 $this->getLogger()->info('no games');
                 return;
             }
 
-            $game = new Entity\Game($host, $bot->getMessage()->getRecipient());
+            $game = new Entity\Game($player, $bot->getMessage()->getRecipient());
             
             $this->getDoctrine()->getManager()->persist($game);
             $bot->say('Starting a new game! Other players, click this then press start to join: '.$this->getJoinLink($bot->getMessage()->getRecipient()), $bot->getMessage()->getRecipient());
@@ -78,30 +83,22 @@ class TelegramController extends Controller
         });
         
         $botman->hears('/end(.*)', function (BotMan $bot) {
-            if ($bot->getMessage()->getSender() === $bot->getMessage()->getRecipient()) {
-                $this->getLogger()->info('cannot end from here');
-                return;
-            }
             
             $senderId = $bot->getMessage()->getSender();
-            /** @var Entity\Player $host */
-            $host = $this->getDoctrine()->getRepository(Entity\Player::class)->findOrCreate($senderId, $bot->getUser()->getFirstName());
+            /** @var Entity\Player $player */
+            $player = $this->getDoctrine()->getRepository(Entity\Player::class)->findOrCreate($senderId, $bot->getUser()->getFirstName());
             /** @var Entity\Game $game */
-            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($host);
+            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player);
             if ($game === null) {
                 $this->getLogger()->info('missing game to end');
                 return;
             }
             
-            if ($game->getHost()->getId() === $senderId) {
-                $game->setState(Entity\Game::END);
+            $game->setState(Entity\Game::END);
 
-                $this->getDoctrine()->getManager()->persist($game);
+            $this->getDoctrine()->getManager()->persist($game);
 
-                $bot->say('Ending the game!', $bot->getMessage()->getRecipient());                          
-            } else {
-                $bot->say('Only the host can end the game', $bot->getMessage()->getRecipient());
-            }
+            $bot->say('Ending the game!', $game->getChatGroup());                          
             
         });
 
@@ -387,6 +384,16 @@ class TelegramController extends Controller
             ->getDoctrine()
             ->getRepository(Entity\Player::class)
             ->findOrCreate($senderId, $botMan->getUser()->getFirstName());
+        
+        $existingGames = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS);
+        $existingGames = array_merge(
+            [$existingGames],
+            [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)]
+        );
+        
+        if (count($existingGames) > 0) {
+            $botMan->reply('You are already in a different game!');
+        }
 
         /** @var Entity\Game $game */
         $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findOneBy(['chatGroup' => $chatGroup, 'state' => Entity\Game::GATHER_PLAYERS]);
