@@ -451,6 +451,17 @@ class TelegramController extends Controller
         }
 
         if ($game->votesAreTallied($questionNumber)) {
+
+            $question = $game->getQuestions()->offsetGet($questionNumber);
+
+            /** @var Entity\Answer[] $answers */
+            $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
+            $roundResults = $question->getText();
+
+            foreach ($answers as $answer) {
+                $roundResults .= "\n".$answer->getResponse().' ('.$answer->getPlayer()->getName().' +'.count($answer->getVotes()).')';
+            }
+            
             if ($questionNumber >= $game->getQuestions()->count() - 1) {
                 $game->setState(Entity\Game::END);
                 $this->getDoctrine()->getManager()->persist($game);
@@ -465,16 +476,7 @@ class TelegramController extends Controller
 
                 return;
             }
-
-            $question = $game->getQuestions()->offsetGet($questionNumber);
-
-            /** @var Entity\Answer[] $answers */
-            $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
-            $roundResults = $question->getText();
-
-            foreach ($answers as $answer) {
-                $roundResults .= "\n".$answer->getResponse().' ('.$answer->getPlayer()->getName().' +'.count($answer->getVotes()).')';
-            }
+            
 
             $botMan->say($roundResults, $game->getChatGroup());
 
