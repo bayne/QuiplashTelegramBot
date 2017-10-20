@@ -265,11 +265,15 @@ class TelegramController extends Controller
             
             if ($game->getState() === Entity\Game::GATHER_ANSWERS) {
                 $message = 'The game is currently gathering answers. The following players need to provides answers to their prompts:';
+                $players = [];
                 foreach ($game->getAnswers() as $answer) {
                     if ($answer->isPending()) {
-                        $message .= "\n".$answer->getPlayer()->getName();
+                        $players[] = $answer->getPlayer()->getName();
                     }
                 }
+                
+                $players = array_unique($players);
+                $message .= "\n".implode("\n", $players);
             }
             
             if ($game->getState() === Entity\Game::GATHER_VOTES) {
