@@ -77,6 +77,7 @@ class TelegramController extends Controller
             $game = new Entity\Game($player, $bot->getMessage()->getRecipient());
             
             $this->getDoctrine()->getManager()->persist($game);
+            $this->getDoctrine()->getManager()->flush();
             $bot->say('Starting a new game! Other players, click this then press start to join: '.$this->getJoinLink($bot->getMessage()->getRecipient()), $bot->getMessage()->getRecipient());
             $bot->reply('Once everyone has joined, the host must type /begin to start the game');
 
