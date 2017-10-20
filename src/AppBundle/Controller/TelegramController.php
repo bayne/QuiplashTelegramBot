@@ -47,9 +47,8 @@ class TelegramController extends Controller
                 return;
             }
             
-            $botMan->say('Hello! I will send you private messages here related to the game you are in. Keep a look out.', $botMan->getMessage()->getRecipient());
-            
             $this->join($botMan, $chatGroup, $botMan->getMessage()->getSender());
+            $botMan->say('Hello! I will send you private messages here related to the game you are in. Keep a look out.', $botMan->getMessage()->getRecipient());
         });
 
         $botman->hears('/new(.*)', function (BotMan $bot) {
@@ -65,12 +64,13 @@ class TelegramController extends Controller
             $games = array_merge(
                 [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS)],
                 $this->getDoctrine()->getRepository(Entity\Game::class)->findRunningGames($bot->getMessage()->getRecipient()),
-                [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)]
+                [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)],
+                [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_PLAYERS)]
             );
             $games = array_filter($games);
             
             if (count($games) > 0) {
-                $this->getLogger()->info('no games');
+                $this->getLogger()->info('multiple games');
                 return;
             }
 
@@ -386,16 +386,17 @@ class TelegramController extends Controller
             ->getRepository(Entity\Player::class)
             ->findOrCreate($senderId, $botMan->getUser()->getFirstName());
         
-        $existingGames = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS);
         $existingGames = array_merge(
-            [$existingGames],
-            [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)]
+            [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_ANSWERS)],
+            [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)],
+            [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_PLAYERS)]
         );
         
         $existingGames = array_filter($existingGames);
         
         if (count($existingGames) > 0) {
             $botMan->reply('You are already in a different game!');
+            return;
         }
 
         /** @var Entity\Game $game */
