@@ -67,6 +67,7 @@ class TelegramController extends Controller
                 $this->getDoctrine()->getRepository(Entity\Game::class)->findRunningGames($bot->getMessage()->getRecipient()),
                 [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)]
             );
+            $games = array_filter($games);
             
             if (count($games) > 0) {
                 $this->getLogger()->info('no games');
@@ -390,6 +391,8 @@ class TelegramController extends Controller
             [$existingGames],
             [$this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES)]
         );
+        
+        $existingGames = array_filter($existingGames);
         
         if (count($existingGames) > 0) {
             $botMan->reply('You are already in a different game!');
