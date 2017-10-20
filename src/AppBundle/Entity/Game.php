@@ -254,9 +254,11 @@ class Game
         }, $votedPlayers);
         
         $notVotedPlayers = [];
-        foreach ($this->players as $player) {
-            if (!in_array($player->getId(), $votedPlayersIds) && !in_array($player->getId(), $notVotedPlayers)) {
+        $notVotedPlayersIds = [];
+        foreach ($this->getVotersForCurrentQuestion() as $player) {
+            if (!in_array($player->getId(), $votedPlayersIds) && !in_array($player->getId(), $notVotedPlayersIds)) {
                 $notVotedPlayers[] = $player;
+                $notVotedPlayersIds[] = $player->getId();
             }
         }
             
@@ -274,7 +276,7 @@ class Game
             }
         }
         
-        return $totalVotesForQuestion >= $this->players->count();
+        return $totalVotesForQuestion >= count($this->getVotersForCurrentQuestion());
     }
 
     public function isStillRunning()
@@ -326,6 +328,32 @@ class Game
         });
         
         return $points;
+    }
+
+    public function getVotersForCurrentQuestion()
+    {
+        $allPlayers = $this->players->map(function (Player $player) {
+            return $player->getId();
+        });
+        
+        $questionAnswers = $this->answers->filter(function (Answer $answer) {
+            return $answer->getQuestion()->getId() === $this->currentQuestion->getId();
+        });
+        
+        $answerers = $questionAnswers->map(function (Answer $answer) {
+            return $answer->getPlayer()->getId();
+        });
+        
+        $voters = [];
+        foreach (array_diff($allPlayers, $answerers) as $id) {
+            foreach ($this->players as $player) {
+                if ($player->getId() === $id) {
+                    $voters[] = $player;
+                }
+            }
+        }
+        
+        return $voters;
     }
 
 }

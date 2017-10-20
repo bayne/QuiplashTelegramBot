@@ -2,7 +2,6 @@
 
 namespace AppBundle\Controller;
 
-use AppBundle\MiddlewarePersister;
 use BotMan\BotMan\Messages\Incoming;
 use BotMan\BotMan\Messages\Outgoing;
 use AppBundle\Entity;
@@ -40,10 +39,6 @@ class TelegramController extends Controller
             $cache,
             $request
         );
-
-//        $middleware = new MiddlewarePersister($this->getDoctrine()->getManager(), $this->getLogger());
-//        
-//        $botman->middleware->sending($middleware);
 
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
             $this->getLogger()->info('joined');
@@ -362,7 +357,7 @@ class TelegramController extends Controller
         $prompt .= "Look at your private messages and choose the best answer";
         $botMan->say($prompt, $game->getChatGroup());
 
-        foreach ($game->getPlayers() as $player) {
+        foreach ($game->getVotersForCurrentQuestion() as $player) {
             
             $prompt = Outgoing\Question::create("Choose the best answer to the following prompt: ".'"'.$question->getText().'"');
             $prompt->addButtons(
