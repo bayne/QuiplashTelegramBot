@@ -350,12 +350,18 @@ class TelegramController extends Controller
     private function vote($questionNumber, Entity\Game $game, BotMan $botMan)
     {
         $question = $game->getQuestions()->offsetGet($questionNumber);
+
+        $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
+        $prompt = '';
+        if ($game->getCurrentQuestion() === null) {
+            $prompt .= 'Time for the next question! ';
+        }
+        $prompt .= "Look at your private messages and choose the best answer\n";
+        $prompt .= "The prompt: ".'"'.$question->getText().'"';
+        $botMan->say($prompt, $game->getChatGroup());
+        
         $game->setCurrentQuestion($question);
         $this->getDoctrine()->getManager()->persist($game);
-        $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
-        $prompt = "The prompt: ".'"'.$question->getText().'"'."\n";
-        $prompt .= "Look at your private messages and choose the best answer";
-        $botMan->say($prompt, $game->getChatGroup());
 
         foreach ($game->getVotersForCurrentQuestion() as $player) {
             
@@ -453,12 +459,13 @@ class TelegramController extends Controller
 
             /** @var Entity\Answer[] $answers */
             $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
-            $roundResults = $question->getText();
+            $roundResults = '';
 
             foreach ($answers as $answer) {
                 $roundResults .= "\n".$answer->getResponse().' ('.$answer->getPlayer()->getName().' +'.count($answer->getVotes()).')';
             }
-            
+            $botMan->say($roundResults, $game->getChatGroup());
+
             if ($questionNumber >= $game->getQuestions()->count() - 1) {
                 $game->setState(Entity\Game::END);
                 $this->getDoctrine()->getManager()->persist($game);
@@ -475,7 +482,6 @@ class TelegramController extends Controller
             }
             
 
-            $botMan->say($roundResults, $game->getChatGroup());
 
             $this->vote($questionNumber+1, $game, $botMan);
         }
