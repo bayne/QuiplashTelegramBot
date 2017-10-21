@@ -336,10 +336,13 @@ class TelegramController extends Controller
                 $this->vote(0, $game, $botMan);
                 return;
             }
-            $this->getLogger()->info('misisng answer to respond');
 
             /** @var Entity\Answer $answer */
             $answer = $this->getDoctrine()->getRepository(Entity\Answer::class)->getNextForUser($player, $game);
+            if ($answer === null) {
+                $botMan->say('Answers submitted, waiting for other players', $player->getId());
+                return;
+            }
             
             $botMan->say($answer->getQuestion()->getText(), $player->getId());
         });
