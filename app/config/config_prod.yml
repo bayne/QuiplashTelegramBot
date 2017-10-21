@@ -2,6 +2,17 @@ imports:
     - { resource: config.yml }
     - { resource: parameters_prod.php }
 
+services:
+    app.graylog.transport:
+        class: Gelf\Transport\UdpTransport
+        arguments:
+            - graylog.southroute.com
+            - 5432
+    app.graylog.publisher:
+        class: Gelf\Publisher
+        arguments:
+            - '@app.graylog.transport'
+
 #doctrine:
 #    orm:
 #        metadata_cache_driver: apc
@@ -10,6 +21,11 @@ imports:
 
 monolog:
     handlers:
+        graylog:
+            type: gelf
+            publisher:
+                id: app.graylog.publisher
+            level: debug
         main:
             type: error_log
             level: debug
