@@ -2,6 +2,8 @@
 
 namespace AppBundle\Controller;
 
+use AppBundle\MiddlewarePersister;
+use BotMan\BotMan\Http\Curl;
 use BotMan\BotMan\Messages\Incoming;
 use BotMan\BotMan\Messages\Outgoing;
 use AppBundle\Entity;
@@ -23,7 +25,14 @@ class TelegramController extends Controller
     {
         DriverManager::loadDriver(TelegramDriver::class);
         $cache = new SymfonyCache(new PdoAdapter($this->getDoctrine()->getConnection()));
-        return BotManFactory::create(
+        $middleware = new MiddlewarePersister(
+            $this->getDoctrine()->getManager(),
+            $this->get('logger')
+        );
+        
+        
+        
+        $botman = BotManFactory::create(
             [
                 'telegram' => [
                     'token' => $this->getParameter('telegram_token'),
@@ -32,6 +41,10 @@ class TelegramController extends Controller
             $cache,
             $request
         );       
+        
+        $botman->middleware->sending($middleware);
+        $botman->middleware->received($middleware);
+        return $botman;
     }
     
     /**
@@ -43,11 +56,29 @@ class TelegramController extends Controller
     {
         $botMan = $this->getBot($request);
         $activeGames = $this->getDoctrine()->getRepository(Entity\Game::class)->getAllActiveGames();
+        $curl = new Curl();
+        /** @var TelegramDriver $driver */
+        $driver = $botMan->getDriver();
         /** @var Entity\Game $game */
         foreach ($activeGames as $game) {
             $warningState = $game->warningStateToAnnounce(new \DateTime());
             if (false === $warningState->equals($game->getWarningState())) {
-                $botMan->say(sprintf('%s seconds remaining!', $warningState->getWarningValue()), $game->getChatGroup());
+                $url = TelegramDriver::DEFAULT_BASE_URL.'/bot'.$this->getParameter('telegram_token').'/sendMessage';
+                $parameters = [
+                    'text' => sprintf('%s seconds remaining!', $warningState->getWarningValue()),
+                    'chat_id' => $game->getChatGroup()
+                ];
+                $response = $curl->post(
+                    $url,
+                    [],
+                    $parameters
+                );
+                $this->getLogger()->info('second warning', [
+                    'response_body' => $response->getContent(),
+                    'response_code' => $response->getStatusCode(),
+                    'url' => $url,
+                    'parameters' => json_encode($parameters)
+                ]);
                 $game->setWarningState($warningState);
                 $this->getDoctrine()->getManager()->persist($game);
             }

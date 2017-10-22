@@ -60,6 +60,13 @@ class MiddlewarePersister implements MiddlewareInterface
      */
     public function received(IncomingMessage $message, $next, BotMan $bot)
     {
+        if ($message->getText()) {
+            $this->logger->info('new message', [
+                'text' => $message->getText(),
+                'sender' => $message->getSender(),
+            ]);    
+        }
+        
         return $next($message);
     }
 
@@ -100,37 +107,9 @@ class MiddlewarePersister implements MiddlewareInterface
      */
     public function sending($payload, $next, BotMan $bot)
     {
-        $text = $payload['text'];
-        
-        $messages = $this->entityManager->getRepository(Message::class)->findBy(
-            [
-                'chksum' => md5($text),
-                'recipient' =>  $payload['chat_id']
-            ],
-            ['currentTime' => 'desc']
-        );
-        
-        $message = new Message();
-        $message->setChksum(md5($text));
-        $message->setMessage($text);
-        $message->setRecipient($payload['chat_id']);
-        $this->entityManager->persist($message);
-        $this->entityManager->flush();
-
-        if (count($messages) > 0) {
-            /** @var Message $message */
-            $message = reset($messages);
-            if (time() - $message->getCurrentTime()->getTimestamp() > 30) {
-                $result = $next($payload);
-                $this->logger((string) $result);
-                return $result;
-            }
-            
-        } else {
-            $result = $next($payload);
-            $this->logger((string) $result);
-            return $result;
+        if ($payload) {
+            $this->logger->info('sending message', ['value' => json_encode($payload)]);
         }
-        
+        return $next($payload);
     }
 }
