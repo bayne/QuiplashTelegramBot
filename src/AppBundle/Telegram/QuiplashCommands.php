@@ -576,7 +576,9 @@ class QuiplashCommands
 
         if ($game->isExpired()) {
             if ($game->getState() === Entity\Game::GATHER_PLAYERS) {
-                if ($game->hasEnoughPlayers()) {
+                if (false === $game->getPlayers()->contains($game->getHost())) {
+                    $botMan->say('The host needs to join the game. Ending the game!', $game->getChatGroup());
+                } elseif ($game->hasEnoughPlayers()) {
                     $game->setState(Entity\Game::GATHER_ANSWERS);
                     $this->beginGame($game, $botMan);
                 } else {
