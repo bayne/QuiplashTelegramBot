@@ -6,7 +6,7 @@ parameters:
 services:
 
     app.graylog.transport:
-        class: Gelf\Transport\UdpTransport
+        class: Gelf\Transport\TcpTransport
         arguments:
             - graylog.southroute.com
             - 16580
