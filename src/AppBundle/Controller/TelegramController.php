@@ -175,8 +175,23 @@ class TelegramController extends Controller
             $this->getDoctrine()->getManager()->flush();
             
             if ($this->join($bot, $bot->getMessage()->getRecipient(), $senderId)) {
-                $bot->say('Starting a new game! Other players, click this then press start to join: '.$this->getJoinLink($bot->getMessage()->getRecipient()), $bot->getMessage()->getRecipient());
-                $bot->reply('Once everyone has joined, the host must type /begin to start the game');    
+                $bot->sendRequest(
+                    'sendMessage',
+                    [
+                        'chat_id' => $game->getChatGroup(),
+                        'text' => "Starting a new game! Click the Join button below then click start to join.\nOnce everyone has joined, the host can type /begin to start the game",
+                        'reply_markup' => json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => 'Join',
+                                        'url' => $this->getJoinLink($game->getChatGroup())
+                                    ]
+                                ]
+                            ]
+                        ])
+                    ]
+                );
             }
         });
         
@@ -250,7 +265,24 @@ class TelegramController extends Controller
             $message = '';
 
             if ($game->getState() === Entity\Game::GATHER_PLAYERS) {
-                $message = 'The game is currently gathering players. Click the following link to join: '.$this->getJoinLink($chatGroup);
+                $botMan->sendRequest(
+                    'sendMessage',
+                    [
+                        'chat_id' => $game->getChatGroup(),
+                        'text' => "Gathering players for a new game.\nClick the Join button below then click start to join.\nOnce everyone has joined, the host can type /begin to start the game",
+                        'reply_markup' => json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => 'Join',
+                                        'url' => $this->getJoinLink($game->getChatGroup())
+                                    ]
+                                ]
+                            ]
+                        ])
+                    ]
+                );
+                return;
             }
             
             if ($game->getState() === Entity\Game::GATHER_ANSWERS) {
