@@ -47,6 +47,27 @@ class TelegramController extends Controller
         return $botman;
     }
     
+    private function sendMessage($text, $chatId)
+    {
+        $curl = new Curl();
+        $url = TelegramDriver::DEFAULT_BASE_URL . '/bot' . $this->getParameter('telegram_token') . '/sendMessage';
+        $parameters = [
+            'text' => $text,
+            'chat_id' => $chatId
+        ];
+        $response = $curl->post(
+            $url,
+            [],
+            $parameters
+        );
+        $this->getLogger()->info('message sent with curl', [
+            'response_body' => $response->getContent(),
+            'response_code' => $response->getStatusCode(),
+            'url' => $url,
+            'parameters' => json_encode($parameters)
+        ]);
+    }
+    
     /**
      * @Route("/heartbeat", name="telegramHeartbeat")
      * 
@@ -56,29 +77,14 @@ class TelegramController extends Controller
     {
         $botMan = $this->getBot($request);
         $activeGames = $this->getDoctrine()->getRepository(Entity\Game::class)->getAllActiveGames();
-        $curl = new Curl();
-        /** @var TelegramDriver $driver */
-        $driver = $botMan->getDriver();
         /** @var Entity\Game $game */
         foreach ($activeGames as $game) {
             $warningState = $game->warningStateToAnnounce(new \DateTime());
             if (false === $warningState->equals($game->getWarningState())) {
-                $url = TelegramDriver::DEFAULT_BASE_URL.'/bot'.$this->getParameter('telegram_token').'/sendMessage';
-                $parameters = [
-                    'text' => sprintf('%s seconds remaining!', $warningState->getWarningValue()),
-                    'chat_id' => $game->getChatGroup()
-                ];
-                $response = $curl->post(
-                    $url,
-                    [],
-                    $parameters
+                $this->sendMessage(
+                    sprintf('%s seconds', $warningState->getWarningValue()),
+                    $game->getChatGroup()
                 );
-                $this->getLogger()->info('second warning', [
-                    'response_body' => $response->getContent(),
-                    'response_code' => $response->getStatusCode(),
-                    'url' => $url,
-                    'parameters' => json_encode($parameters)
-                ]);
                 $game->setWarningState($warningState);
                 $this->getDoctrine()->getManager()->persist($game);
             }
@@ -89,7 +95,13 @@ class TelegramController extends Controller
                         $game->setState(Entity\Game::GATHER_ANSWERS);
                         $this->beginGame($game, $botMan);
                     } else {
-                        $botMan->say('You need at least three players before the game can start', $game->getChatGroup());
+                        $this->sendMessage(
+                            'You need at least three players to start a game. Ending the game!',
+                            $game->getChatGroup()
+                        );
+
+                        $game->setState(Entity\Game::END);
+                        $this->getDoctrine()->getManager()->persist($game);
                     }
                 } elseif ($game->getState() === Entity\Game::GATHER_ANSWERS) {
                     foreach ($game->getAnswers() as $answer) {
