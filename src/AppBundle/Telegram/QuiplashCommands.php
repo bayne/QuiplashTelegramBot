@@ -81,25 +81,23 @@ class QuiplashCommands
         $this->getDoctrine()->getManager()->persist($game);
         $this->getDoctrine()->getManager()->flush();
 
-        if ($this->join($bot, $bot->getMessage()->getRecipient(), $senderId)) {
-            $bot->sendRequest(
-                'sendMessage',
-                [
-                    'chat_id' => $game->getChatGroup(),
-                    'text' => "Starting a new game! Click the Join button below then click start to join.\nOnce everyone has joined, the host can type /begin to start the game",
-                    'reply_markup' => json_encode([
-                        'inline_keyboard' => [
+        $bot->sendRequest(
+            'sendMessage',
+            [
+                'chat_id' => $game->getChatGroup(),
+                'text' => "Starting a new game! Click the Join button below then click start to join.\nOnce everyone has joined, the host can type /begin to start the game",
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => [
+                        [
                             [
-                                [
-                                    'text' => 'Join',
-                                    'url' => $this->getJoinLink($game->getChatGroup())
-                                ]
+                                'text' => 'Join',
+                                'url' => $this->getJoinLink($game->getChatGroup())
                             ]
                         ]
-                    ])
-                ]
-            );
-        }
+                    ]
+                ])
+            ]
+        );
     }
 
     public function handleEnd(BotMan $bot)
@@ -109,9 +107,15 @@ class QuiplashCommands
         /** @var Entity\Player $player */
         $player = $this->getDoctrine()->getRepository(Entity\Player::class)->findOrCreate($senderId, $bot->getUser()->getFirstName());
         /** @var Entity\Game $game */
-        $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player);
-        if ($game === null) {
+        $games = $this->getDoctrine()->getRepository(Entity\Game::class)->findRunningGames($bot->getMessage()->getRecipient());
+        if (count($games) === 0) {
             $this->getLogger()->info('missing game to end');
+            return;
+        }
+        $game = reset($games);
+        
+        if ($player->getId() !== $game->getHost()->getId()) {
+            $bot->say('Only the host can end the game', $game->getChatGroup());
             return;
         }
 
@@ -147,13 +151,16 @@ class QuiplashCommands
             return;
         }
 
-        if (false === $game->hasEnoughPlayers()) {
-            $botMan->reply('You need at least three players before the game can start');
-            return;
-        }
-
         if ($message->getSender() === $game->getHost()->getId()) {
-            $this->beginGame($game, $botMan);
+            if (!$game->getPlayers()->contains($game->getHost())) {
+                $botMan->say('You need to click the Join button', $botMan->getMessage()->getRecipient());
+            } else {
+                if ($game->hasEnoughPlayers()) {
+                    $this->beginGame($game, $botMan);
+                } else {
+                    $botMan->reply('You need at least three players before the game can start');
+                }
+            }
         } else {
             $botMan->say('Only the host can begin the game', $botMan->getMessage()->getRecipient());
         }
