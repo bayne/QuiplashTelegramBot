@@ -4,6 +4,17 @@ parameters:
     #parameter_name: value
 
 services:
+
+    app.graylog.transport:
+        class: Gelf\Transport\UdpTransport
+        arguments:
+            - graylog.southroute.com
+            - 16580
+    app.graylog.publisher:
+        class: Gelf\Publisher
+        arguments:
+            - '@app.graylog.transport'
+
     # default configuration for services in *this* file
     _defaults:
         # automatically injects dependencies in your services
