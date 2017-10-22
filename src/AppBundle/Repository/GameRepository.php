@@ -50,6 +50,15 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
         
         return $game;
     }
+
+    public function getAllActiveGames()
+    {
+        return $this->createQueryBuilder('g')
+            ->where("g.state != 'end'")
+            ->getQuery()
+            ->execute()
+        ;
+    }
     
     public function findRunningGames($chatGroup)
     {

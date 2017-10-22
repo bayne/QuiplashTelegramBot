@@ -19,6 +19,68 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class TelegramController extends Controller
 {
+    private function getBot(Request $request)
+    {
+        DriverManager::loadDriver(TelegramDriver::class);
+        $cache = new SymfonyCache(new PdoAdapter($this->getDoctrine()->getConnection()));
+        return BotManFactory::create(
+            [
+                'telegram' => [
+                    'token' => $this->getParameter('telegram_token'),
+                ],
+            ], 
+            $cache,
+            $request
+        );       
+    }
+    
+    /**
+     * @Route("/heartbeat", name="telegramHeartbeat")
+     * 
+     * @param Request $request
+     */
+    public function heartbeatAction(Request $request)
+    {
+        $botMan = $this->getBot($request);
+        $activeGames = $this->getDoctrine()->getRepository(Entity\Game::class)->getAllActiveGames();
+        /** @var Entity\Game $game */
+        foreach ($activeGames as $game) {
+            $warningState = $game->warningStateToAnnounce(new \DateTime());
+            if (false === $warningState->equals($game->getWarningState())) {
+                $botMan->say(sprintf('%s seconds remaining!', $warningState->getWarningValue()), $game->getChatGroup());
+                $game->setWarningState($warningState);
+                $this->getDoctrine()->getManager()->persist($game);
+            }
+            
+            if ($game->isExpired()) {
+                if ($game->getState() === Entity\Game::GATHER_PLAYERS) {
+                    if ($game->hasEnoughPlayers()) {
+                        $game->setState(Entity\Game::GATHER_ANSWERS);
+                        $this->beginGame($game, $botMan);
+                    } else {
+                        $botMan->say('You need at least three players before the game can start', $game->getChatGroup());
+                    }
+                } elseif ($game->getState() === Entity\Game::GATHER_ANSWERS) {
+                    foreach ($game->getAnswers() as $answer) {
+                        if ($answer->isPending()) {
+                            $answer->setResponse('No answer');
+                            $this->getDoctrine()->getManager()->persist($answer);
+                        }
+                    }
+                    $game->setState(Entity\Game::GATHER_VOTES);
+                    $this->getDoctrine()->getManager()->persist($game);
+                } elseif ($game->getState() === Entity\Game::GATHER_VOTES) {
+                    $this->nextQuestion($game, $botMan, true);
+                } else {
+                    // do nothing
+                }
+            }
+            $this->getDoctrine()->getManager()->flush();
+        }
+        $botMan->listen();
+
+    }
+    
     /**
      * @Route("/telegram", name="telegramListen")
      *
@@ -27,17 +89,7 @@ class TelegramController extends Controller
      */
     public function listenAction(Request $request)
     {
-        DriverManager::loadDriver(TelegramDriver::class);
-        $cache = new SymfonyCache(new PdoAdapter($this->getDoctrine()->getConnection()));
-        $botman = BotManFactory::create(
-            [
-                'telegram' => [
-                    'token' => $this->getParameter('telegram_token'),
-                ],
-            ], 
-            $cache,
-            $request
-        );
+        $botman = $this->getBot($request);
 
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
             $this->getLogger()->info('joined');
@@ -129,111 +181,13 @@ class TelegramController extends Controller
                 return;
             }
             
-            if ($game->getPlayers()->count() < 3) {
+            if (false === $game->hasEnoughPlayers()) {
                 $botMan->reply('You need at least three players before the game can start');
                 return;
             }
 
             if ($message->getSender() === $game->getHost()->getId()) {
-
-                $pairPlayers = function (Entity\Game $game) {
-                    $players1 = [];
-                    $counts = [];
-                    
-                    foreach ($game->getPlayers() as $player) {
-                        $counts[$player->getId()] = 0;
-                    }
-                    
-                    unset($player);
-                    
-                    foreach ($game->getPlayers() as $currentPlayer) {
-                        $otherPlayers = $game->getPlayers()->filter(function (Entity\Player $player) use ($currentPlayer) {
-                            return $player->getId() !== $currentPlayer->getId();
-                        });
-                        
-                        $otherPlayers = $otherPlayers->toArray();
-
-                        shuffle($otherPlayers);
-
-                        while (!empty($otherPlayers)) {
-                            $otherPlayer = array_pop($otherPlayers);
-                            if ($counts[$currentPlayer->getId()] >= 2) {
-                                continue;
-                            }
-                            if ($counts[$otherPlayer->getId()] >= 2) {
-                                continue;
-                            }
-                            
-                            $keys = [
-                                $currentPlayer->getId(),
-                                $otherPlayer->getId()
-                            ];
-                            
-                            sort($keys);
-                            
-                            $keyHash = implode('-', $keys);
-                            
-                            $players1[$keyHash] = [$currentPlayer, $otherPlayer];
-                            $counts[$currentPlayer->getId()] += 1;
-                            $counts[$otherPlayer->getId()] += 1;
-                        }
-                    }
-                    
-                    return $players1;
-                };
-                
-                $playerPairs = $pairPlayers($game);
-                
-                $questions = $this
-                    ->getDoctrine()
-                    ->getRepository(Entity\Question::class)
-                    ->generateQuestions(count($playerPairs))
-                ;
-
-                foreach ($questions as $question) {
-                    $game->getQuestions()->add($question);
-                }
-
-                $this->getDoctrine()->getManager()->persist($game);
-                
-                $questionsCollection = $game->getQuestions();
-                
-                $alreadyQuestioned = [];
-                foreach ($playerPairs as $i => list($player1, $player2)) {
-                    $question = $questionsCollection->current();
-                    $questionsCollection->next();
-                    $answer = new Entity\Answer(
-                        $player1,
-                        $question,
-                        $game
-                    );
-
-                    $this->getDoctrine()->getManager()->persist($answer);
-                    
-                    $answer = new Entity\Answer(
-                        $player2,
-                        $question,
-                        $game
-                    );
-
-                    $this->getDoctrine()->getManager()->persist($answer);
-                    
-
-                    $prompt = "Reply to the following prompt with something witty: \n".$question->getText();
-                    if (!in_array($player1->getId(), $alreadyQuestioned)) {
-                        $botMan->say($prompt, $player1->getId());
-                        $alreadyQuestioned[] = $player1->getId();
-                    }
-                    if (!in_array($player2->getId(), $alreadyQuestioned)) {
-                        $botMan->say($prompt, $player2->getId());
-                        $alreadyQuestioned[] = $player2->getId();
-                    }
-                }
-                
-                $game->setState(Entity\Game::GATHER_ANSWERS);
-                $this->getDoctrine()->getManager()->persist($game);
-
-                $botMan->say('Game has begun! I sent each of you a prompt..', $botMan->getMessage()->getRecipient());
+                $this->beginGame($game, $botMan);
             } else {
                 $botMan->say('Only the host can begin the game', $botMan->getMessage()->getRecipient());
             }
@@ -465,15 +419,20 @@ class TelegramController extends Controller
         
         $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findCurrentGameForPlayer($player, Entity\Game::GATHER_VOTES);
 
+        $this->nextQuestion($game, $botMan);
+    }
+    
+    protected function nextQuestion(Entity\Game $game, BotMan $botMan, $forceNextQuestion = false)
+    {
         $questionNumber = 0;
         foreach ($game->getQuestions() as $i => $question) {
-            if ($question->getId() === $answer->getQuestion()->getId()) {
+            if ($question->getId() === $game->getCurrentQuestion()->getId()) {
                 $questionNumber = $i;
                 break;
             }
         }
 
-        if ($game->votesAreTallied($questionNumber)) {
+        if ($game->votesAreTallied($questionNumber) || $forceNextQuestion) {
 
             $question = $game->getQuestions()->offsetGet($questionNumber);
 
@@ -500,11 +459,110 @@ class TelegramController extends Controller
 
                 return;
             }
-            
-
 
             $this->vote($questionNumber+1, $game, $botMan);
         }
+    }
+    
+    protected function beginGame(Entity\Game $game, BotMan $botMan)
+    {
+        $pairPlayers = function (Entity\Game $game) {
+            $players1 = [];
+            $counts = [];
+
+            foreach ($game->getPlayers() as $player) {
+                $counts[$player->getId()] = 0;
+            }
+
+            unset($player);
+
+            foreach ($game->getPlayers() as $currentPlayer) {
+                $otherPlayers = $game->getPlayers()->filter(function (Entity\Player $player) use ($currentPlayer) {
+                    return $player->getId() !== $currentPlayer->getId();
+                });
+
+                $otherPlayers = $otherPlayers->toArray();
+
+                shuffle($otherPlayers);
+
+                while (!empty($otherPlayers)) {
+                    $otherPlayer = array_pop($otherPlayers);
+                    if ($counts[$currentPlayer->getId()] >= 2) {
+                        continue;
+                    }
+                    if ($counts[$otherPlayer->getId()] >= 2) {
+                        continue;
+                    }
+
+                    $keys = [
+                        $currentPlayer->getId(),
+                        $otherPlayer->getId()
+                    ];
+
+                    sort($keys);
+
+                    $keyHash = implode('-', $keys);
+
+                    $players1[$keyHash] = [$currentPlayer, $otherPlayer];
+                    $counts[$currentPlayer->getId()] += 1;
+                    $counts[$otherPlayer->getId()] += 1;
+                }
+            }
+
+            return $players1;
+        };
+
+        $playerPairs = $pairPlayers($game);
+
+        $questions = $this
+            ->getDoctrine()
+            ->getRepository(Entity\Question::class)
+            ->generateQuestions(count($playerPairs));
+
+        foreach ($questions as $question) {
+            $game->getQuestions()->add($question);
+        }
+
+        $this->getDoctrine()->getManager()->persist($game);
+
+        $questionsCollection = $game->getQuestions();
+
+        $alreadyQuestioned = [];
+        foreach ($playerPairs as $i => list($player1, $player2)) {
+            $question = $questionsCollection->current();
+            $questionsCollection->next();
+            $answer = new Entity\Answer(
+                $player1,
+                $question,
+                $game
+            );
+
+            $this->getDoctrine()->getManager()->persist($answer);
+
+            $answer = new Entity\Answer(
+                $player2,
+                $question,
+                $game
+            );
+
+            $this->getDoctrine()->getManager()->persist($answer);
+
+
+            $prompt = "Reply to the following prompt with something witty: \n" . $question->getText();
+            if (!in_array($player1->getId(), $alreadyQuestioned)) {
+                $botMan->say($prompt, $player1->getId());
+                $alreadyQuestioned[] = $player1->getId();
+            }
+            if (!in_array($player2->getId(), $alreadyQuestioned)) {
+                $botMan->say($prompt, $player2->getId());
+                $alreadyQuestioned[] = $player2->getId();
+            }
+        }
+
+        $game->setState(Entity\Game::GATHER_ANSWERS);
+        $this->getDoctrine()->getManager()->persist($game);
+
+        $botMan->say('Game has begun! I sent each of you a prompt..', $game->getChatGroup());       
     }
     
     public function getJoinLink($chatGroup)
