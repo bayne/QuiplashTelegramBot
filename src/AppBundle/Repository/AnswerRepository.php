@@ -3,6 +3,7 @@
 namespace AppBundle\Repository;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\Player;
+use Doctrine\DBAL\LockMode;
 
 /**
  * AnswerRepository
@@ -25,7 +26,18 @@ class AnswerRepository extends \Doctrine\ORM\EntityRepository
             ])
             ->setMaxResults(1)
             ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getOneOrNullResult()
         ;
     }
+
+    public function findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+    {
+        $persister = $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName);
+        $persister->lock($criteria, LockMode::PESSIMISTIC_WRITE);
+
+        return $persister->loadAll($criteria, $orderBy, $limit, $offset);
+    }
+
+
 }

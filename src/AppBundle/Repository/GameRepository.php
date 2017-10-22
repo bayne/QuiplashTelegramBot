@@ -3,6 +3,7 @@
 namespace AppBundle\Repository;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\Player;
+use Doctrine\DBAL\LockMode;
 
 /**
  * GameRepository
@@ -18,6 +19,7 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
             ->join('g.players', 'p')
             ->where('p.id = :player')
             ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->setParameters([
                 'player' => $player
             ])
@@ -44,6 +46,7 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
             ->orderBy('g.id', 'desc')
             ->setMaxResults(1)
             ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->setParameter('player', $player->getId())
             ->getOneOrNullResult()
         ;
@@ -56,6 +59,7 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
         return $this->createQueryBuilder('g')
             ->where("g.state != 'end'")
             ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->execute()
         ;
     }
@@ -71,4 +75,29 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
             ->execute()
         ;
     }
+    
+    public function findOneBy(array $criteria, array $orderBy = null)
+    {
+        $persister = $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName);
+
+        return $persister->load(
+            $criteria,
+            null,
+            null,
+            array(),
+            LockMode::PESSIMISTIC_WRITE,
+            1,
+            $orderBy
+        );
+    }
+
+    public function findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+    {
+        $persister = $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName);
+        $persister->lock($criteria, LockMode::PESSIMISTIC_WRITE);
+
+        return $persister->loadAll($criteria, $orderBy, $limit, $offset);
+    }
+
+
 }

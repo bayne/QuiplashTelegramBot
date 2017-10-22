@@ -12,6 +12,8 @@ use BotMan\BotMan\BotManFactory;
 use BotMan\BotMan\Cache\SymfonyCache;
 use BotMan\BotMan\Drivers\DriverManager;
 use BotMan\Drivers\Telegram\TelegramDriver;
+use Doctrine\DBAL\LockMode;
+use Doctrine\ORM\EntityManager;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Cache\Adapter\PdoAdapter;
@@ -75,6 +77,8 @@ class TelegramController extends Controller
      */
     public function heartbeatAction(Request $request)
     {
+        $this->getDoctrine()->getConnection()->beginTransaction();
+        /** @var EntityManager $em */
         $botMan = $this->getBot($request);
         $activeGames = $this->getDoctrine()->getRepository(Entity\Game::class)->getAllActiveGames();
         /** @var Entity\Game $game */
@@ -122,6 +126,7 @@ class TelegramController extends Controller
         }
         $botMan->listen();
 
+        $this->getDoctrine()->getConnection()->commit();
     }
     
     /**
@@ -132,6 +137,7 @@ class TelegramController extends Controller
      */
     public function listenAction(Request $request)
     {
+        $this->getDoctrine()->getConnection()->beginTransaction();
         $botman = $this->getBot($request);
 
         $botman->hears('/start {chatGroup}', function (BotMan $botMan, $chatGroup) {
@@ -353,7 +359,7 @@ class TelegramController extends Controller
             $this->getDoctrine()->getManager()->flush();
             $this->getDoctrine()->getManager()->clear();
 
-            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->find($game->getId());
+            $game = $this->getDoctrine()->getRepository(Entity\Game::class)->findOneBy(['id' => $game->getId()]);
            
             if ($game->allAnswersAreIn()) {
                 $game->setState(Entity\Game::GATHER_VOTES);
@@ -378,6 +384,7 @@ class TelegramController extends Controller
         $botman->listen();
 
         $this->getDoctrine()->getManager()->flush();
+        $this->getDoctrine()->getConnection()->commit();
 
         return new Response();
     }
