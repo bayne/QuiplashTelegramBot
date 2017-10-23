@@ -97,7 +97,8 @@ class TelegramController extends Controller
         foreach ($activeGames as $game) {
             $botMan = $this->getBot($this->buildRequest($game));
             $botMan->hears('/heartbeat(.*)', function (BotMan $botMan) use ($game, $quiplashCommands) {
-                $quiplashCommands->handleHeartbeat($botMan, $game);
+                $currentTime = new \DateTime();
+                $quiplashCommands->handleHeartbeat($botMan, $game, $currentTime);
             });
             $botMan->listen();
         }

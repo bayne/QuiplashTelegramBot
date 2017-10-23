@@ -107,9 +107,7 @@ class MiddlewarePersister implements MiddlewareInterface
      */
     public function sending($payload, $next, BotMan $bot)
     {
-        if ($payload) {
-            $this->logger->info('sending message', ['value' => json_encode($payload)]);
-        }
+        $this->logger->info('sending message', ['value' => json_encode($bot->getMessage()->getPayload())]);
         return $next($payload);
     }
 }

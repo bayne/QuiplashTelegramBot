@@ -44,6 +44,7 @@ class QuiplashCommands
         $this->getLogger()->info('joined');
         $chatGroup = base64_decode($chatGroup);
         if ($botMan->getMessage()->getSender() !== $botMan->getMessage()->getRecipient()) {
+            $this->getLogger()->info('can only join via PM');
             return;
         }
 
@@ -304,7 +305,7 @@ class QuiplashCommands
 
         $answers = $this->getDoctrine()->getRepository(Entity\Answer::class)->findBy(['question' => $question, 'game' => $game]);
         $prompt = '';
-        if ($game->getCurrentQuestion() === null) {
+        if ($game->getCurrentQuestion() !== null) {
             $prompt .= 'Time for the next question! ';
         }
         $prompt .= "Look at your private messages and choose the best answer\n";
@@ -561,9 +562,9 @@ class QuiplashCommands
         $botMan->say('Game has begun! I sent each of you a prompt..', $game->getChatGroup());
     }
     
-    public function handleHeartbeat(BotMan $botMan, Entity\Game $game)
+    public function handleHeartbeat(BotMan $botMan, Entity\Game $game, \DateTime $currentTime)
     {
-        $warningState = $game->warningStateToAnnounce(new \DateTime());
+        $warningState = $game->warningStateToAnnounce($currentTime);
         if (false === $warningState->equals($game->getWarningState())) {
             $this->sendMessage(
                 $botMan,
@@ -574,7 +575,7 @@ class QuiplashCommands
             $this->getDoctrine()->getManager()->persist($game);
         }
 
-        if ($game->isExpired()) {
+        if ($game->isExpired($currentTime)) {
             if ($game->getState() === Entity\Game::GATHER_PLAYERS) {
                 if (false === $game->getPlayers()->contains($game->getHost())) {
                     $botMan->say('The host needs to join the game. Ending the game!', $game->getChatGroup());
@@ -598,7 +599,13 @@ class QuiplashCommands
                         $this->getDoctrine()->getManager()->persist($answer);
                     }
                 }
+
                 $game->setState(Entity\Game::GATHER_VOTES);
+                
+                $botMan->say('Now its time to vote on your favorite answers', $game->getChatGroup());
+
+                $this->vote(0, $game, $botMan);
+                
                 $this->getDoctrine()->getManager()->persist($game);
             } elseif ($game->getState() === Entity\Game::GATHER_VOTES) {
                 $this->nextQuestion($game, $botMan, true);

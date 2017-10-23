@@ -348,10 +348,22 @@ class Game
     {
         if ($state == self::GATHER_ANSWERS) {
             $this->gatheringAnswersStarted = new \DateTime();
+            $this->setWarningState(
+                new WarningState(
+                    self::GATHER_ANSWERS,
+                    self::TIME_TO_ANSWER
+                )
+            );
         }
         
         if ($state == self::GATHER_PLAYERS) {
             $this->gatheringPlayersStarted = new \DateTime();
+            $this->setWarningState(
+                new WarningState(
+                    self::GATHER_PLAYERS,
+                    self::TIME_TO_JOIN
+                )
+            );
         }
         
         $this->state = $state;
@@ -406,28 +418,47 @@ class Game
         return $voters;
     }
     
-    public function isExpired()
+    public function isExpired(\DateTime $current)
     {
-        $current = (new \DateTime())->getTimestamp();
+        $current = $current->getTimestamp();
+        
+        if (!$this->gatheringVotesStarted) {
+            $gatheringVotesStarted = $current;
+        } else {
+            $gatheringVotesStarted = $this->gatheringVotesStarted->getTimestamp();
+        }
+        
+        if (!$this->gatheringPlayersStarted) {
+            $gatheringPlayersStarted = $current;
+        } else {
+            $gatheringPlayersStarted = $this->gatheringPlayersStarted->getTimestamp();
+        }
+
+        if (!$this->gatheringAnswersStarted) {
+            $gatheringAnswersStarted = $current;
+        } else {
+            $gatheringAnswersStarted = $this->gatheringAnswersStarted->getTimestamp();
+        }
+        
         return 
             (
                 $this->state === self::GATHER_VOTES &&
-                $current - $this->gatheringVotesStarted->getTimestamp() > self::TIME_TO_VOTE
+                $current - $gatheringVotesStarted > self::TIME_TO_VOTE
             ) ||
             (
                 $this->state === self::GATHER_PLAYERS && 
-                $current - $this->gatheringPlayersStarted->getTimestamp() > self::TIME_TO_JOIN
+                $current - $gatheringPlayersStarted > self::TIME_TO_JOIN
             ) ||
             (
                 $this->state === self::GATHER_ANSWERS && 
-                $current - $this->gatheringAnswersStarted->getTimestamp() > self::TIME_TO_ANSWER
+                $current - $gatheringAnswersStarted > self::TIME_TO_ANSWER
             )
         ;
     }
     
-    public function getSecondsRemaining()
+    public function getSecondsRemaining(\DateTime $current)
     {
-        $current = (new \DateTime())->getTimestamp();
+        $current = $current->getTimestamp();
         if ($this->state === self::GATHER_ANSWERS) {
             return self::TIME_TO_ANSWER - ($current - $this->gatheringAnswersStarted->getTimestamp());
         }
@@ -517,7 +548,7 @@ class Game
 
     public function hasEnoughPlayers()
     {
-        return $this->getPlayers()->count() > 3;
+        return $this->getPlayers()->count() >= 3;
     }
 
 }
