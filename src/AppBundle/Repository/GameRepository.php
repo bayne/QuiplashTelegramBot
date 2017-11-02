@@ -2,7 +2,8 @@
 
 namespace AppBundle\Repository;
 use AppBundle\Entity\Game;
-use AppBundle\Entity\Player;
+use AppBundle\Entity\User;
+use AppBundle\Entity\Vote;
 use Doctrine\DBAL\LockMode;
 
 /**
@@ -13,26 +14,26 @@ use Doctrine\DBAL\LockMode;
  */
 class GameRepository extends \Doctrine\ORM\EntityRepository
 {
-    public function findByPlayer(Player $player)
+    public function findByUser(User $user)
     {
         return $this->createQueryBuilder('g')
-            ->join('g.players', 'p')
-            ->where('p.id = :player')
+            ->join('g.users', 'p')
+            ->where('p.id = :user')
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->setParameters([
-                'player' => $player
+                'user' => $user
             ])
             ->getOneOrNullResult()
         ;
     }
     
-    public function findCurrentGameForPlayer(Player $player, $state = null)
+    public function findCurrentGameForUser(User $user, $state = null)
     {
         /** @var Game $game */
         $query = $this->createQueryBuilder('g')
-            ->join('g.players', 'p')
-            ->andWhere('p.id = :player')
+            ->join('g.users', 'p')
+            ->andWhere('p.id = :user')
             ->andWhere("g.state != 'end'")
         ;
         if ($state !== null) {
@@ -47,7 +48,7 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
             ->setMaxResults(1)
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
-            ->setParameter('player', $player->getId())
+            ->setParameter('user', $user->getId())
             ->getOneOrNullResult()
         ;
         
@@ -97,6 +98,28 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
         $persister->lock($criteria, LockMode::PESSIMISTIC_WRITE);
 
         return $persister->loadAll($criteria, $orderBy, $limit, $offset);
+    }
+
+    public function updateGame(Game $game)
+    {
+        $this->getEntityManager()->persist($game);
+        $this->getEntityManager()->flush();
+    }
+
+    public function recordVote(Vote $vote)
+    {
+        $this->getEntityManager()->persist($vote);
+        $this->getEntityManager()->flush();
+    }
+
+    public function beginTransaction()
+    {
+        $this->_em->beginTransaction();
+    }
+
+    public function commit()
+    {
+        $this->_em->commit();
     }
 
 

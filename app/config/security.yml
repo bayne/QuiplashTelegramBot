@@ -6,6 +6,16 @@ security:
     providers:
         in_memory:
             memory: ~
+        chain_provider:
+            chain:
+                providers:
+                    - entity_provider
+                    - telegram_update
+        entity_provider:
+            entity:
+                class: AppBundle:User
+        telegram_update:
+            id: 'AppBundle\Security\TelegramUpdateUserProvider'
 
     firewalls:
         # disables authentication for assets and the profiler, adapt it according to your needs
@@ -13,8 +23,19 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
+        prompt:
+            pattern: ^/telegram/quiplash/prompts
+            security: false
+            stateless: true
+
         main:
-            anonymous: ~
+            pattern: ^/
+            security: true
+            provider: chain_provider
+            stateless: true
+            guard:
+                authenticators:
+                    - 'AppBundle\Security\TelegramUpdateAuthenticator'
             # activate different ways to authenticate
 
             # https://symfony.com/doc/current/security.html#a-configuring-how-your-users-will-authenticate

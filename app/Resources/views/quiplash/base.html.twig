@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Welcome!{% endblock %}</title>
+  {% block stylesheets %}{% endblock %}
+  <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}" />
+  <link href="https://fonts.googleapis.com/css?family=Oxygen" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" rel="stylesheet">
+  <style>
+    html, body, div.wrapper, form, div#form {
+      font-family: 'Oxygen', sans-serif;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+    }
+    body {
+      display: flex;
+      background-color: #f7f7ff;
+      color: #23d3eb;
+    }
+    div#form {
+      justify-content: space-evenly;
+      display: flex;
+      flex-direction: column;
+    }
+    h2 {
+      text-align: center;
+      margin:auto;
+      padding: 2em;
+    }
+    div#form div {
+      padding: 1.3em;
+    }
+    label {
+      font-size: 2em;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    input[type="text"] {
+      display: block;
+      font-size: 2em;
+      width: 90%;
+      border: none;
+      margin-left: auto;
+      margin-right: auto;
+      border-bottom: 2px solid #ea526f;
+      background: transparent;
+      color: #ea526f;
+    }
+    button {
+      border: none;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      background-color: #279Af1;
+      letter-spacing: 3px;
+      color: #c4e3fb;
+      border-bottom-left-radius: 3px;
+      border-bottom-right-radius: 3px;
+      box-shadow: 0 4px 8px 0 rgba(0,0,0,.2), 0 6px 20px 0 rgba(0,0,0,.19);
+      padding: 0.5em;
+      font-size: 2em;
+    }
+    button.disabled {
+      background-color: #ebf5fd;
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+{% block body %}{% endblock %}
+</div>
+{% block javascripts %}{% endblock %}
+</body>
+</html>

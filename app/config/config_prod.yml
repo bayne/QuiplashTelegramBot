@@ -15,6 +15,7 @@ monolog:
             publisher:
                 id: app.graylog.publisher
             level: debug
+            channels: ['app']
         main:
             type: error_log
             level: debug

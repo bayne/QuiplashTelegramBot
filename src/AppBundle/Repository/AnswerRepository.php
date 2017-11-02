@@ -2,7 +2,7 @@
 
 namespace AppBundle\Repository;
 use AppBundle\Entity\Game;
-use AppBundle\Entity\Player;
+use AppBundle\Entity\User;
 use Doctrine\DBAL\LockMode;
 
 /**
@@ -13,15 +13,15 @@ use Doctrine\DBAL\LockMode;
  */
 class AnswerRepository extends \Doctrine\ORM\EntityRepository
 {
-    public function getNextForUser(Player $player, Game $game)
+    public function getNextForUser(User $user, Game $game)
     {
         return $this->createQueryBuilder('a')
             ->where("a.response = ''")
-            ->andWhere('a.player = :player')
+            ->andWhere('a.user = :user')
             ->andWhere('a.game = :game')
             ->orderBy('a.id', 'asc')
             ->setParameters([
-                'player' => $player,
+                'user' => $user,
                 'game' => $game
             ])
             ->setMaxResults(1)

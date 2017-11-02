@@ -2,6 +2,7 @@
     "name": "bpayne/guess-the-sha",
     "license": "proprietary",
     "type": "project",
+    "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
             "AppBundle\\": "src/AppBundle"
@@ -27,8 +28,7 @@
     ],
     "require": {
         "php": ">=5.5.9",
-        "botman/botman": "^2.1",
-        "botman/driver-telegram": "dev-master",
+        "bayne/telegram-bot-api": "dev-master",
         "doctrine/doctrine-bundle": "^1.6",
         "doctrine/doctrine-migrations-bundle": "^1.2",
         "doctrine/orm": "^2.5",

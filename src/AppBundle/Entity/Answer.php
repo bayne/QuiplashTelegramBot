@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Answer
  *
- * @ORM\Table(name="answer")
+ * @ORM\Table(name="answer", indexes={@ORM\Index(name="token",columns={"token"})})
  * @ORM\Entity(repositoryClass="AppBundle\Repository\AnswerRepository")
  */
 class Answer
@@ -23,11 +23,11 @@ class Answer
     private $id;
 
     /**
-     * @var Player
+     * @var User
      * 
-     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\Player")
+     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\User")
      */
-    private $player;
+    private $user;
 
     /**
      * @var Question
@@ -46,7 +46,12 @@ class Answer
     /**
      * @var Vote[]
      * 
-     * @ORM\OneToMany(targetEntity="AppBundle\Entity\Vote", cascade={"all"}, mappedBy="answer")
+     * @ORM\OneToMany(
+     *     targetEntity="AppBundle\Entity\Vote",
+     *     cascade={"all"},
+     *     mappedBy="answer",
+     *     fetch="EAGER"
+     * )
      */
     private $votes;
 
@@ -58,17 +63,26 @@ class Answer
     private $response = '';
 
     /**
+     * @var string
+     *
+     * @ORM\Column(type="string")
+     */
+    private $token;
+
+    /**
      * Answer constructor.
-     * @param Player $player
+     * @param User $user
      * @param Question $question
      * @param Game $game
+     * @param string $token
      */
-    public function __construct(Player $player, Question $question, Game $game)
+    public function __construct(User $user, Question $question, Game $game, $token)
     {
-        $this->player = $player;
+        $this->user = $user;
         $this->question = $question;
         $this->game = $game;
         $this->votes = new ArrayCollection();
+        $this->token = $token;
     }
 
 
@@ -83,21 +97,21 @@ class Answer
     }
 
     /**
-     * @return Player
+     * @return User
      */
-    public function getPlayer()
+    public function getUser()
     {
-        return $this->player;
+        return $this->user;
     }
 
     /**
-     * @param string $player
+     * @param string $user
      *
      * @return Answer
      */
-    public function setPlayer($player)
+    public function setUser($user)
     {
-        $this->player = $player;
+        $this->user = $user;
         return $this;
     }
 
@@ -180,6 +194,24 @@ class Answer
     public function isPending()
     {
         return $this->response == '';
+    }
+
+    /**
+     * @return string
+     */
+    public function getToken(): string
+    {
+        return $this->token;
+    }
+
+    public function alreadyVoted(User $user)
+    {
+        foreach ($this->votes as $vote) {
+            if ($user->getId() === $vote->getUser()->getId()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

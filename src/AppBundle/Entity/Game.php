@@ -2,7 +2,9 @@
 
 namespace AppBundle\Entity;
 
+use AppBundle\Entity\Exception\GameAlreadyExistsException;
 use AppBundle\Entity\ValueObject\WarningState;
+use AppBundle\Repository\GameRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -18,11 +20,11 @@ class Game
     const TIME_TO_ANSWER = 30;
     const TIME_TO_VOTE = 30;
     
-    const GATHER_PLAYERS = 'gather_players';
+    const GATHER_USERS = 'gather_users';
     const GATHER_ANSWERS = 'gather_answers';
     const GATHER_VOTES = 'gather_votes';
     const END = 'end';
-    
+
     /**
      * @var int
      *
@@ -42,7 +44,7 @@ class Game
     /**
      * @var string
      *
-     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\Player")
+     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\User")
      */
     private $host;
 
@@ -54,11 +56,11 @@ class Game
     private $answers;
 
     /**
-     * @var Player[]
+     * @var User[]
      * 
-     * @ORM\ManyToMany(targetEntity="AppBundle\Entity\Player")
+     * @ORM\ManyToMany(targetEntity="AppBundle\Entity\User")
      */
-    private $players;
+    private $users;
 
     /**
      * @var Question[]|ArrayCollection
@@ -94,7 +96,7 @@ class Game
      * 
      * @ORM\Column(type="datetime", nullable=true)
      */
-    private $gatheringPlayersStarted;
+    private $gatheringUsersStarted;
     
     /**
      * @var \DateTime
@@ -112,20 +114,20 @@ class Game
     
     /**
      * Game constructor.
-     * @param Player $host
+     * @param User $host
      * @param $chatGroup
      */
-    public function __construct(Player $host, $chatGroup)
+    public function __construct(User $host, $chatGroup)
     {
         $this->lastUpdated = new \DateTime();
         $this->answers = new ArrayCollection();
-        $this->players = new ArrayCollection();
+        $this->users = new ArrayCollection();
         $this->host = $host;
         $this->chatGroup = $chatGroup;
         $this->questions = new ArrayCollection();
-        $this->state = self::GATHER_PLAYERS;
+        $this->state = self::GATHER_USERS;
         $this->gatheringAnswersStarted = null;
-        $this->gatheringPlayersStarted = new \DateTime();
+        $this->gatheringUsersStarted = new \DateTime();
         $this->gatheringVotesStarted = null;
         $this->warningState = new WarningState(
             $this->state,
@@ -205,7 +207,7 @@ class Game
     /**
      * Get host
      *
-     * @return Player
+     * @return User
      */
     public function getHost()
     {
@@ -232,21 +234,21 @@ class Game
     }
 
     /**
-     * @return Player[]|ArrayCollection
+     * @return User[]|ArrayCollection
      */
-    public function getPlayers()
+    public function getUsers()
     {
-        return $this->players;
+        return $this->users;
     }
 
     /**
-     * @param Player[] $players
+     * @param User[] $users
      *
      * @return Game
      */
-    public function setPlayers($players)
+    public function setUsers($users)
     {
-        $this->players = $players;
+        $this->users = $users;
         return $this;
     }
 
@@ -256,9 +258,20 @@ class Game
             $validAnswers = $this->answers->filter(function (Answer $answer) {
                 return $answer->getResponse();
             });
-            return $validAnswers->count() === $this->getPlayers()->count() * 2;
+            return $validAnswers->count() === $this->getUsers()->count() * 2;
         } 
         return false;
+    }
+
+    public function getAnswersForCurrentQuestion()
+    {
+        $answers = [];
+        foreach ($this->answers as $answer) {
+            if ($answer->getQuestion()->getId() === $this->currentQuestion->getId()) {
+                $answers[] = $answer;
+            }
+        }
+        return $answers;
     }
 
     /**
@@ -280,31 +293,36 @@ class Game
         return $this;
     }
     
-    public function getMissingPlayerVotes()
+    public function getMissingUserVotes()
     {
-        $votedPlayers = [];
+        $votedUsers = [];
         foreach ($this->getAnswers() as $answer) {
-            if ($this->currentQuestion->getId() === $answer->getQuestion()->getId()) {
+            if (
+                $this->currentQuestion->getId() === $answer->getQuestion()->getId()
+            ) {
                 foreach ($answer->getVotes() as $vote) {
-                    $votedPlayers[] = $vote->getPlayer();
+                    $votedUsers[] = $vote->getUser();
                 }
             }
         }
+
+        $votedUsersIds = array_map(function (User $user) {
+            return $user->getId();
+        }, $votedUsers);
         
-        $votedPlayersIds = array_map(function (Player $player) {
-            return $player->getId();
-        }, $votedPlayers);
-        
-        $notVotedPlayers = [];
-        $notVotedPlayersIds = [];
-        foreach ($this->getVotersForCurrentQuestion() as $player) {
-            if (!in_array($player->getId(), $votedPlayersIds) && !in_array($player->getId(), $notVotedPlayersIds)) {
-                $notVotedPlayers[] = $player;
-                $notVotedPlayersIds[] = $player->getId();
+        $notVotedUsers = [];
+        $notVotedUsersIds = [];
+        foreach ($this->getVotersForCurrentQuestion() as $user) {
+            if (
+                !in_array($user->getId(), $votedUsersIds) &&
+                !in_array($user->getId(), $notVotedUsersIds)
+            ) {
+                $notVotedUsers[] = $user;
+                $notVotedUsersIds[] = $user->getId();
             }
         }
             
-        return $notVotedPlayers;
+        return $notVotedUsers;
     }
 
     public function votesAreTallied($questionNumber)
@@ -328,7 +346,7 @@ class Game
             $totalVotes += $answer->getVotes()->count();
         }
         
-        return $totalVotes >= $this->getQuestions()->count()*$this->getPlayers()->count();
+        return $totalVotes >= $this->getQuestions()->count()*$this->getUsers()->count();
     }
 
     /**
@@ -356,11 +374,11 @@ class Game
             );
         }
         
-        if ($state == self::GATHER_PLAYERS) {
-            $this->gatheringPlayersStarted = new \DateTime();
+        if ($state == self::GATHER_USERS) {
+            $this->gatheringUsersStarted = new \DateTime();
             $this->setWarningState(
                 new WarningState(
-                    self::GATHER_PLAYERS,
+                    self::GATHER_USERS,
                     self::TIME_TO_JOIN
                 )
             );
@@ -374,15 +392,15 @@ class Game
     {
         $points = [];
         
-        foreach ($this->players as $player) {
-            $points[$player->getId()] = [
-                'player' => $player,
+        foreach ($this->users as $user) {
+            $points[$user->getId()] = [
+                'user' => $user,
                 'points' => 0
             ];
         }
         
         foreach ($this->answers as $answer) {
-            $points[$answer->getPlayer()->getId()]['points'] += count($answer->getVotes());
+            $points[$answer->getUser()->getId()]['points'] += count($answer->getVotes());
         }
         
         usort($points, function ($a, $b) {
@@ -394,8 +412,8 @@ class Game
 
     public function getVotersForCurrentQuestion()
     {
-        $allPlayers = $this->players->map(function (Player $player) {
-            return $player->getId();
+        $allUsers = $this->users->map(function (User $user) {
+            return $user->getId();
         });
         
         $questionAnswers = $this->answers->filter(function (Answer $answer) {
@@ -403,14 +421,14 @@ class Game
         });
         
         $answerers = $questionAnswers->map(function (Answer $answer) {
-            return $answer->getPlayer()->getId();
+            return $answer->getUser()->getId();
         });
         
         $voters = [];
-        foreach (array_diff($allPlayers->toArray(), $answerers->toArray()) as $id) {
-            foreach ($this->players as $player) {
-                if ($player->getId() === $id) {
-                    $voters[] = $player;
+        foreach (array_diff($allUsers->toArray(), $answerers->toArray()) as $id) {
+            foreach ($this->users as $user) {
+                if ($user->getId() === $id) {
+                    $voters[] = $user;
                 }
             }
         }
@@ -428,10 +446,10 @@ class Game
             $gatheringVotesStarted = $this->gatheringVotesStarted->getTimestamp();
         }
         
-        if (!$this->gatheringPlayersStarted) {
-            $gatheringPlayersStarted = $current;
+        if (!$this->gatheringUsersStarted) {
+            $gatheringUsersStarted = $current;
         } else {
-            $gatheringPlayersStarted = $this->gatheringPlayersStarted->getTimestamp();
+            $gatheringUsersStarted = $this->gatheringUsersStarted->getTimestamp();
         }
 
         if (!$this->gatheringAnswersStarted) {
@@ -446,8 +464,8 @@ class Game
                 $current - $gatheringVotesStarted > self::TIME_TO_VOTE
             ) ||
             (
-                $this->state === self::GATHER_PLAYERS && 
-                $current - $gatheringPlayersStarted > self::TIME_TO_JOIN
+                $this->state === self::GATHER_USERS &&
+                $current - $gatheringUsersStarted > self::TIME_TO_JOIN
             ) ||
             (
                 $this->state === self::GATHER_ANSWERS && 
@@ -467,8 +485,8 @@ class Game
             return self::TIME_TO_VOTE - ($current - $this->gatheringVotesStarted->getTimestamp());
         }
         
-        if ($this->state === self::GATHER_PLAYERS) {
-            return self::TIME_TO_JOIN - ($current - $this->gatheringPlayersStarted->getTimestamp());
+        if ($this->state === self::GATHER_USERS) {
+            return self::TIME_TO_JOIN - ($current - $this->gatheringUsersStarted->getTimestamp());
         }
         
         return INF;
@@ -508,8 +526,8 @@ class Game
         } elseif ($warningState->getState() === self::GATHER_VOTES) {
             $startTime = $this->gatheringVotesStarted;
             $maxTime = self::TIME_TO_VOTE;
-        } elseif ($warningState->getState() === self::GATHER_PLAYERS) {
-            $startTime = $this->gatheringPlayersStarted;
+        } elseif ($warningState->getState() === self::GATHER_USERS) {
+            $startTime = $this->gatheringUsersStarted;
             $maxTime = self::TIME_TO_JOIN;
         } else {
             throw new \UnexpectedValueException();
@@ -546,9 +564,22 @@ class Game
         return $number > $lower && $number <= $upper;
     }
 
-    public function hasEnoughPlayers()
+    public function hasEnoughUsers()
     {
-        return $this->getPlayers()->count() >= 3;
+        return $this->getUsers()->count() >= 3;
+    }
+
+    public function alreadyVoted(User $user)
+    {
+        /** @var Answer $answer */
+        foreach ($this->getAnswersForCurrentQuestion() as $answer) {
+            foreach ($answer->getVotes() as $vote) {
+                if ($vote->getUser()->getId() === $user->getId()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }

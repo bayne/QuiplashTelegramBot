@@ -24,14 +24,17 @@ doctrine:
         auto_mapping: true
 
 framework:
+    router:
+        resource: '%kernel.project_dir%/app/config/routing_dev.yml'
     test: ~
     session:
         storage_id: session.storage.mock_file
     profiler:
-        collect: false
+        collect: true
+        only_exceptions: false
 
 web_profiler:
-    toolbar: false
+    toolbar: true
     intercept_redirects: false
 
 swiftmailer:

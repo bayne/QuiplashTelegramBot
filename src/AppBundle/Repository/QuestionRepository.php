@@ -10,10 +10,10 @@ namespace AppBundle\Repository;
  */
 class QuestionRepository extends \Doctrine\ORM\EntityRepository
 {
-    public function generateQuestions($playerCount)
+    public function generateQuestions($userCount)
     {
         $questions = $this->findBy([],null);
         shuffle($questions);
-        return array_slice($questions, 0, $playerCount);
+        return array_slice($questions, 0, $userCount);
     }
 }

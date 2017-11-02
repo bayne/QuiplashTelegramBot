@@ -1,0 +1,23 @@
+{% extends 'quiplash/base.html.twig' %}
+{% block body %}
+  {{ form(form) }}
+{% endblock body %}
+{% block javascripts %}
+  <script type="application/javascript">
+    const element = document.getElementById('form_submit');
+    element.addEventListener('click', function () {
+        element.setAttribute('class', 'disabled');
+        element.setAttribute('disabled', 'disabled');
+        element.innerHTML = `
+        Loading... <i class="fa fa-circle-o-notch fa-spin fa-fw"></i>
+        `;
+        let form = document.querySelector('form');
+        let formData = new FormData(form);
+        let parameters = [...formData.entries()] // expand the elements from the .entries() iterator into an actual array
+            .map(e => encodeURIComponent(e[0]) + "=" + encodeURIComponent(e[1]))  // transform the elements into encoded key-value-pairs
+        parameters.push('form[submit]=1');
+        let location = window.location.pathname + '?' + parameters.join('&');
+        window.location = location;
+    });
+  </script>
+{% endblock javascripts %}

@@ -36,11 +36,11 @@ class Vote
     private $question;
 
     /**
-     * @var Player
+     * @var User
      * 
-     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\Player")
+     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\User")
      */
-    private $player;
+    private $user;
 
     /**
      * @var Game
@@ -79,21 +79,21 @@ class Vote
     }
 
     /**
-     * @return Player
+     * @return User
      */
-    public function getPlayer()
+    public function getUser()
     {
-        return $this->player;
+        return $this->user;
     }
 
     /**
-     * @param Player $player
+     * @param User $user
      *
      * @return Vote
      */
-    public function setPlayer($player)
+    public function setUser($user)
     {
-        $this->player = $player;
+        $this->user = $user;
         return $this;
     }
 
