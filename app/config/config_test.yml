@@ -1,6 +1,10 @@
 imports:
     - { resource: config_dev.yml }
 
+services:
+    telegram_client:
+        class: AppBundle\StubClient
+
 # Doctrine Configuration
 doctrine:
     dbal:
@@ -27,6 +31,8 @@ framework:
     router:
         resource: '%kernel.project_dir%/app/config/routing_dev.yml'
     test: ~
+    csrf_protection:
+        enabled: false
     session:
         storage_id: session.storage.mock_file
     profiler:

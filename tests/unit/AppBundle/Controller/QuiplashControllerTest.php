@@ -10,6 +10,7 @@ use AppBundle\GameManager;
 use Bayne\Serializer\Normalizer\GetSetExcludeNormalizer;
 use Bayne\Telegram\Bot\Client;
 use Bayne\Telegram\Bot\Object\CallbackQuery;
+use Bayne\Telegram\Bot\Object\Chat;
 use Bayne\Telegram\Bot\Object\Message;
 use Bayne\Telegram\Bot\Object\Update;
 use Bayne\Telegram\Bot\Object\User;
@@ -24,16 +25,21 @@ use AppBundle\Entity;
 class QuiplashControllerTest extends WebTestCase
 {
 
-    private function getUser($i)
-    {
-        return new Entity\User(
-            $i,
-            false,
-            'Brian',
-            'Payne',
-            (string) $i
-        );
-    }
+    /**
+     * @var Serializer
+     */
+    private $serializer;
+    /**
+     * @var \Symfony\Bundle\FrameworkBundle\Client
+     */
+    private $client;
+    /**
+     * @var Client
+     */
+    private $telegramClient;
+    private $updateId = 0;
+    private $users = [];
+    private $em;
 
     private function getQuestion()
     {
@@ -44,9 +50,9 @@ class QuiplashControllerTest extends WebTestCase
         return $question;
     }
 
-    public function testVoteCallbackAction()
+    protected function setUp()
     {
-        $serializer = new Serializer(
+        $this->serializer = new Serializer(
             [
                 new GetSetExcludeNormalizer(
                     null,
@@ -57,114 +63,140 @@ class QuiplashControllerTest extends WebTestCase
                 new JsonEncoder()
             ]
         );
-        $client = self::createClient();
+        $this->client = self::createClient();
 
-        $em = $client->getContainer()->get('doctrine')->getManager();
-        $schemaTool = new SchemaTool($em);
-        $metaDatas = $em->getMetadataFactory()->getAllMetadata();
+        $this->em = $this->client->getContainer()->get('doctrine')->getManager();
+        $schemaTool = new SchemaTool($this->em);
+        $metaDatas = $this->em->getMetadataFactory()->getAllMetadata();
         $schemaTool->dropSchema($metaDatas);
         $schemaTool->createSchema($metaDatas);
 
-        $users = [
-            $this->getUser(0),
-            $this->getUser(1),
-            $this->getUser(2),
-//            $this->getUser(3),
-        ];
 
-        $questions = [
-            (new Question('text')),
-            (new Question('text')),
-            (new Question('text')),
-            (new Question('text')),
-            (new Question('text')),
-            (new Question('text')),
-        ];
-
-        foreach ($questions as $question) {
-            $em->persist($question);
+        for ($i = 0; $i < 1000; $i++) {
+            $this->em->persist((new Question('text')));
         }
-
-        foreach ($users as $user) {
-            $em->persist($user);
-        }
-        $em->flush();
-
-        $gameManager = new GameManager(
-            $em->getRepository(Game::class),
-            $em->getRepository(Question::class)
-        );
-
-        $chatGroupId = '0';
-        $gameManager->newGame(
-            $users[0],
-            $chatGroupId
-        );
-
-        foreach ($users as $user) {
-            $gameManager->joinGame(
-                $user,
-                $chatGroupId
-            );
-        }
-
-        $game = $gameManager->beginGame($chatGroupId);
-
-        foreach ($game->getAnswers() as $answer) {
-            $answer->setResponse('test');
-            $em->persist($answer);
-        }
-        $em->flush();
-        $game = $gameManager->beginVoting($game);
+        $this->em->flush();
 
 
+    }
 
-        $update = new Update();
-        $update
-            ->setUpdateId(1)
-            ->setCallbackQuery(
-                (new CallbackQuery())
-                    ->setFrom(
-                        (new User())
-                            ->setFirstName('Brian')
-                            ->setFirstName('Payne')
-                            ->setIsBot(false)
-                            ->setId(2)
-                            ->setUsername('2')
-                    )
-                    ->setData('/vote_callback 1')
-            )
+    public function getUser($name)
+    {
+        $user = $this->users[$name] ?? (new User())
+            ->setFirstName($name)
+            ->setLastName($name)
+            ->setIsBot(false)
+            ->setId(count($this->users)+1)
+            ->setUsername($name)
         ;
 
-        $telegramClient = \Mockery::mock(Client::class);
-        $telegramClient->shouldReceive(
-            'answerCallbackQuery'
-        )->withArgs(function (...$args) {
-            return true;
-        });
-        $client->getContainer()->get(QuiplashController::class)->setClient($telegramClient);
+        $this->users[$name] = $user;
+        return $user;
+    }
 
-        $crawler = $client->request(
+    public function userSays($name, $text, $isCallback = false)
+    {
+
+        $user = $this->getUser($name);
+
+        $message = (new Message())
+            ->setFrom($user)
+            ->setText($text)
+            ->setChat((new Chat())->setId(1));
+
+        $update = new Update();
+        $update->setUpdateId($this->updateId++);
+        if ($isCallback) {
+            $update
+                ->setCallbackQuery(
+                    (new CallbackQuery())
+                        ->setFrom($user)
+                        ->setData($text)
+                        ->setMessage($message)
+                )
+            ;
+        } else {
+            $update
+                ->setMessage($message)
+            ;
+        }
+
+        $crawler = $this->client->request(
             'post',
             '/telegram/quiplash',
             [],
             [],
             [],
-            $serializer->serialize(
+            $this->serializer->serialize(
                 $update,
                 'json'
             )
         );
 
-//        $controller = new QuiplashController();
-//
-//        $request = new Request();
-//        $request->attributes->set('callback_data', '/vote_callback 1');
-//        $update = new Update();
-//
-//        $controller->voteCallbackAction(
-//            $request,
-//            $update
-//        );
+        $this->em->clear();
+        $this->em->flush();
     }
+
+    public function userResponds($name)
+    {
+        $this->em->clear();
+        $answerRepository = $this->client->getContainer()->get('doctrine')->getRepository(Entity\Answer::class);
+        $answers = $answerRepository->findBy([
+            'user'  => $this->getUser($name)->getId()
+        ]);
+        /** @var Entity\Answer $answer */
+        foreach ($answers as $answer) {
+            $this->client->request(
+                'get',
+                '/telegram/quiplash/prompts/'.urlencode(urlencode($answer->getToken())),
+                    [
+                        'form' => [
+                            'submit' => 1,
+                            'response' => 'text',
+                        ]
+                    ]
+            );
+        }
+    }
+
+    public function testFullGame()
+    {
+        $this->userSays('alice', '/new');
+        $this->userSays('bob', '/join_callback', true);
+        $this->userSays('charlie', '/join_callback', true);
+        $this->userSays('alice', '/begin');
+
+        $this->userResponds('alice');
+        $this->userResponds('bob');
+        $this->userResponds('charlie');
+//
+        $this->userSays('alice', '/vote_callback 1', true);
+        $this->userSays('bob', '/vote_callback 1', true);
+        $this->userSays('charlie', '/vote_callback 1', true);
+
+        $this->userSays('alice', '/vote_callback 1', true);
+        $this->userSays('bob', '/vote_callback 1', true);
+        $this->userSays('charlie', '/vote_callback 1', true);
+    }
+
+    public function testBigGame()
+    {
+        $playerCount = 10;
+        $this->userSays('0', '/new');
+        for ($i = 1; $i < $playerCount; $i++) {
+            $this->userSays((string) $i, '/join_callback', true);
+        }
+        $this->userSays('0', '/begin');
+
+        for ($i = 0; $i < $playerCount; $i++) {
+            $this->userResponds((string) $i);
+        }
+
+        for ($i = 0; $i < $playerCount; $i++) {
+            for ($j = 0; $j < $playerCount; $j++) {
+                $this->userSays((string) $j, '/vote_callback 1', true);
+            }
+        }
+    }
+
 }

@@ -271,6 +271,11 @@ class Game
                 $answers[] = $answer;
             }
         }
+
+        usort($answers, function (Answer $a, Answer $b) {
+            return $a->getId() - $b->getId();
+        });
+
         return $answers;
     }
 

@@ -236,4 +236,17 @@ class GameManager
 
         $this->gameRepository->updateGame($game);
     }
+
+    public function getCurrentGame($chatGroupId)
+    {
+        $games = $this->gameRepository->findRunningGames($chatGroupId);
+
+        if (count($games) === 0) {
+            throw new NoGameRunningException();
+        }
+
+        $game = reset($games);
+
+        return $game;
+    }
 }

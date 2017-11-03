@@ -27,7 +27,6 @@ use Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter
 
 class QuiplashController extends Controller
 {
-    private $client;
 
     /**
      * @Route(
@@ -319,72 +318,67 @@ class QuiplashController extends Controller
      */
     public function voteCallbackAction(Request $request, Update $update)
     {
-        list($command, $answerId) = explode(' ', $request->attributes->get('callback_data'));
+        list($command, $choice) = explode(' ', $request->attributes->get('callback_data'));
 
-        /** @var Answer $answer */
-        $answer = $this->getEntityManager()->find(Answer::class, $answerId);
+        /** @var Game $game */
+        $game = $this->getGameManager()->getCurrentGame($update->getCallbackQuery()->getMessage()->getChat()->getId());
+        $answers = $game->getAnswersForCurrentQuestion();
+        $answer = $answers[$choice];
 
-        if ($answer === null) {
-            throw new \RuntimeException('Invalid ID for answer');
-        }
-
-        $game = $answer->getGame();
-
-        $voters = $game->getVotersForCurrentQuestion();
-
-        if (!in_array($this->getUser(), $voters)) {
+        if ($game->alreadyVoted($this->getUser())) {
             $this->getClient()->answerCallbackQuery(
                 $update->getCallbackQuery()->getId(),
-                'You can\'t vote for your own question'
+                'You can\'t vote more than once'
             );
         } else {
-            if ($game->alreadyVoted($this->getUser())) {
+            $voters = $game->getVotersForCurrentQuestion();
+            if (!in_array($this->getUser(), $voters)) {
                 $this->getClient()->answerCallbackQuery(
-                   $update->getCallbackQuery()->getId(),
-                   'You can\'t vote more than once'
+                    $update->getCallbackQuery()->getId(),
+                    'You can\'t vote for your own question'
                 );
             } else {
                 $this->getGameManager()->recordVote($this->getUser(), $answer);
                 $this->getClient()->answerCallbackQuery(
-                   $update->getCallbackQuery()->getId(),
-                   'Vote recorded'
+                    $update->getCallbackQuery()->getId(),
+                    'Vote recorded'
+                );
+            }
+
+            $this->getDoctrine()->getManager()->clear();
+            $game = $this->getDoctrine()->getManager()->find(Game::class, $game->getId());
+
+            if (count($game->getMissingUserVotes()) === 0) {
+                $roundResults = '';
+
+                foreach ($game->getAnswersForCurrentQuestion() as $answer) {
+                    $roundResults .= "\n" . $answer->getResponse() . ' (' . $answer->getUser()->getFirstName() . ' +' . count($answer->getVotes()) . ')';
+                }
+
+                $this->getClient()->sendMessage(
+                    $game->getChatGroup(),
+                    $roundResults
                 );
 
                 $this->getDoctrine()->getManager()->clear();
                 $game = $this->getDoctrine()->getManager()->find(Game::class, $game->getId());
+                $this->getGameManager()->advanceGame($game);
 
-                if (count($game->getMissingUserVotes()) === 0) {
-                    $roundResults = '';
-
-                    foreach ($game->getAnswersForCurrentQuestion() as $answer) {
-                        $roundResults .= "\n" . $answer->getResponse() . ' (' . $answer->getUser()->getFirstName() . ' +' . count($answer->getVotes()) . ')';
+                if ($game->getState() === Game::END) {
+                    $scoreBoard = $game->getScoreBoard();
+                    $gameOver = 'Game Over! Winner: ' . reset($scoreBoard)['user']->getFirstName();
+                    foreach ($scoreBoard as $score) {
+                        $gameOver .= "\n" . $score['user']->getFirstName() . ': ' . $score['points'] . " pts";
                     }
 
                     $this->getClient()->sendMessage(
                         $game->getChatGroup(),
-                        $roundResults
+                        $gameOver
                     );
-
-                    $this->getDoctrine()->getManager()->clear();
-                    $game = $this->getDoctrine()->getManager()->find(Game::class, $game->getId());
-                    $this->getGameManager()->advanceGame($game);
-                    
-                    if ($game->getState() === Game::END) {
-                        $scoreBoard = $game->getScoreBoard();
-                        $gameOver = 'Game Over! Winner: ' . reset($scoreBoard)['user']->getFirstName();
-                        foreach ($scoreBoard as $score) {
-                            $gameOver .= "\n" . $score['user']->getFirstName() . ': ' . $score['points'] . " pts";
-                        }
-
-                        $this->getClient()->sendMessage(
-                            $game->getChatGroup(),
-                            $gameOver
-                        );
-                    } else {
-                        $this->askToVoteOnCurrentQuestion($game);
-                    }
-                    
+                } else {
+                    $this->askToVoteOnCurrentQuestion($game);
                 }
+
             }
         }
 
@@ -445,21 +439,9 @@ class QuiplashController extends Controller
         return $this->getDoctrine()->getManager();
     }
 
-    public function setClient(Client $client)
-    {
-        $this->client = $client;
-    }
-
     protected function getClient()
     {
-        if (!$this->client) {
-            $this->client = new Client(
-                new \GuzzleHttp\Client(),
-                $this->getParameter('telegram_token'),
-                new CamelCaseToSnakeCaseNameConverter()
-            );
-        }
-        return $this->client;
+        return $this->get('telegram_client');
     }
 
     /**
@@ -494,12 +476,12 @@ class QuiplashController extends Controller
                         [
                             (new InlineKeyboardButton())
                                 ->setText($answers[0]->getResponse())
-                                ->setCallbackData('/vote_callback ' . $answers[0]->getId()),
+                                ->setCallbackData('/vote_callback 0'),
                         ],
                         [
                             (new InlineKeyboardButton())
                                 ->setText($answers[1]->getResponse())
-                                ->setCallbackData('/vote_callback ' . $answers[1]->getId()),
+                                ->setCallbackData('/vote_callback 1'),
                         ]
                     ]
                 )

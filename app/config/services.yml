@@ -43,6 +43,17 @@ services:
         class: AppBundle\ExceptionListener
         tags:
           - { name: kernel.event_listener, event: kernel.exception }
+    guzzle_client:
+        class: GuzzleHttp\Client
+    camel_converter:
+        class: Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter
+    telegram_client:
+        class: Bayne\Telegram\Bot\Client
+        public: true
+        arguments:
+            - '@guzzle_client'
+            - '%telegram_token%'
+            - '@camel_converter'
 
     # add more services, or override services that need manual wiring
     # AppBundle\Service\ExampleService:
