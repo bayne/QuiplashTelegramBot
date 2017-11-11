@@ -41,6 +41,8 @@ services:
         tags: ['controller.service_arguments']
     exception_listener:
         class: AppBundle\ExceptionListener
+        arguments:
+          - '@logger'
         tags:
           - { name: kernel.event_listener, event: kernel.exception }
     guzzle_client:

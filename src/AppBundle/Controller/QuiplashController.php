@@ -6,13 +6,13 @@ use AppBundle\Entity\Answer;
 use AppBundle\Entity\Exception\AlreadyInTheGameException;
 use AppBundle\Entity\Exception\GameException;
 use AppBundle\Entity\Exception\NoAnswersForUserException;
+use AppBundle\Entity\Exception\NoGameRunningException;
 use AppBundle\Entity\Exception\NotEnoughPlayersException;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\Question;
 use AppBundle\Entity\User;
 use AppBundle\GameManager;
 use AppBundle\Repository\GameRepository;
-use Bayne\Telegram\Bot\Client;
 use Bayne\Telegram\Bot\Object\InlineKeyboardButton;
 use Bayne\Telegram\Bot\Object\InlineKeyboardMarkup;
 use Bayne\Telegram\Bot\Object\Update;
@@ -23,7 +23,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter;
 
 class QuiplashController extends Controller
 {
@@ -59,16 +58,7 @@ class QuiplashController extends Controller
                 null,
                 null,
                 null,
-                (new InlineKeyboardMarkup())
-                    ->setInlineKeyboard(
-                        [
-                            [
-                                (new InlineKeyboardButton())
-                                    ->setText('Join')
-                                    ->setCallbackData('/join_callback')
-                            ]
-                        ]
-                    )
+                $this->getJoinKeyboard()
             );
         } catch (GameException $e) {
             $this->getLogger()->info($e->getMessage());
@@ -108,16 +98,7 @@ class QuiplashController extends Controller
                 $this->getJoinMessage($game),
                 null,
                 null,
-                (new InlineKeyboardMarkup())
-                    ->setInlineKeyboard(
-                        [
-                            [
-                                (new InlineKeyboardButton())
-                                    ->setText('Join')
-                                    ->setCallbackData('/join_callback')
-                            ]
-                        ]
-                    )
+                $this->getJoinKeyboard()
             );
 
         } catch (AlreadyInTheGameException $e) {
@@ -155,22 +136,8 @@ class QuiplashController extends Controller
                 $update->getMessage()->getChat()->getId()
             );
 
-            $this->getClient()->sendGame(
-                $game->getChatGroup(),
-                'quiplash',
-                false,
-                null,
-                (new InlineKeyboardMarkup())
-                    ->setInlineKeyboard(
-                        [
-                            [
-                                (new InlineKeyboardButton())
-                                    ->setText('Enter your prompts')
-                                    ->setCallbackGame(true)
-                            ]
-                        ]
-                    )
-            );
+            $this->sendGame($game);
+
         } catch (NotEnoughPlayersException $e) {
             $this->getClient()->sendMessage(
                 $update->getMessage()->getChat()->getId(),
@@ -387,6 +354,56 @@ class QuiplashController extends Controller
 
     /**
      * @Route(
+     *     name="status_command",
+     *     path="/telegram/quiplash",
+     *     methods={"POST"},
+     *     condition="request.attributes.get('text') matches '<^/status>'"
+     * )
+     *
+     * @param Update $update
+     * @return Response
+     */
+    public function statusAction(Update $update)
+    {
+        try {
+
+            /** @var Game $game */
+            $game = $this->getGameManager()->getCurrentGame($update->getMessage()->getChat()->getId());
+
+            if ($game->getState() === Game::GATHER_USERS) {
+                $this->getClient()->sendMessage(
+                    $game->getChatGroup(),
+                    'The game is currently gathering players. ' . $this->getJoinMessage($game),
+                    null,
+                    null,
+                    null,
+                    null,
+                    $this->getJoinKeyboard()
+                );
+            } elseif ($game->getState() === Game::GATHER_ANSWERS) {
+                $this->sendGame($game);
+            } elseif ($game->getState() === Game::GATHER_VOTES) {
+                $this->askToVoteOnCurrentQuestion($game);
+            } elseif ($game->getState() === Game::END) {
+                $this->getClient()->sendMessage(
+                    $game->getChatGroup(),
+                    'The game has ended'
+                );
+            } else {
+                $this->getLogger()->critical('Invalid state for game', ['state' => $game->getState()]);
+            }
+        } catch (NoGameRunningException $e) {
+            $this->getClient()->sendMessage(
+                $update->getMessage()->getChat()->getId(),
+                'There is currently no game running'
+            );
+        }
+
+        return new Response();
+    }
+
+    /**
+     * @Route(
      *     name="end_game_command",
      *     path="/telegram/quiplash",
      *     methods={"POST"},
@@ -502,4 +519,40 @@ class QuiplashController extends Controller
             )
         ;
     }
+
+    private function getJoinKeyboard()
+    {
+        return (new InlineKeyboardMarkup())
+            ->setInlineKeyboard(
+                [
+                    [
+                        (new InlineKeyboardButton())
+                            ->setText('Join')
+                            ->setCallbackData('/join_callback')
+                    ]
+                ]
+            )
+        ;
+    }
+
+    private function sendGame(Game $game)
+    {
+        $this->getClient()->sendGame(
+            $game->getChatGroup(),
+            'quiplash',
+            false,
+            null,
+            (new InlineKeyboardMarkup())
+                ->setInlineKeyboard(
+                    [
+                        [
+                            (new InlineKeyboardButton())
+                                ->setText('Enter your prompts')
+                                ->setCallbackGame(true)
+                        ]
+                    ]
+                )
+        );
+    }
+
 }
