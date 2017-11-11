@@ -79,7 +79,7 @@ class Game
     /**
      * @var Question
      * 
-     * @ORM\OneToOne(targetEntity="AppBundle\Entity\Question")
+     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\Question")
      * @ORM\JoinColumn(nullable=true)
      */
     private $currentQuestion;
