@@ -313,7 +313,7 @@ class QuiplashController extends Controller
             }
 
             $this->getDoctrine()->getManager()->clear();
-            $game = $this->getDoctrine()->getManager()->find(Game::class, $game->getId());
+            $game = $this->getGameManager()->getCurrentGame($game->getChatGroup());
 
             if (count($game->getMissingUserVotes()) === 0) {
                 $roundResults = '';

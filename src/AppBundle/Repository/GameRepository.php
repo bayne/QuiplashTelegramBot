@@ -72,6 +72,7 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
             ->andWhere("g.state != 'end'")
             ->andWhere('g.chatGroup = :chatGroup')
             ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->setParameter('chatGroup', $chatGroup)
             ->execute()
         ;
