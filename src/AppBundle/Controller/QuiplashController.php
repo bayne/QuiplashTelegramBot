@@ -387,11 +387,13 @@ class QuiplashController extends Controller
                     "The following people still need to provide an answer:\n".
                     implode(
                         "\n",
-                        array_map(
-                            function (Answer $answer) {
-                                return $answer->getUser()->getFirstName();
-                            },
-                            $game->getPendingAnswers()
+                        array_unique(
+                            array_map(
+                                function (Answer $answer) {
+                                    return $answer->getUser()->getFirstName();
+                                },
+                                $game->getPendingAnswers()
+                            )
                         )
                     )
                 );
