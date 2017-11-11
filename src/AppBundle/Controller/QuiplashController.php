@@ -480,9 +480,14 @@ class QuiplashController extends Controller
     private function askToVoteOnCurrentQuestion(Game $game)
     {
         $answers = $game->getAnswersForCurrentQuestion();
+        $prompt = $game->getCurrentQuestion()->getText().":\n"
+            .'A: '.$answers[0]->getResponse()."\n"
+            .'B: '.$answers[1]->getResponse()
+        ;
+
         $this->getClient()->sendMessage(
             $game->getChatGroup(),
-            $game->getCurrentQuestion()->getText(),
+            $prompt,
             null,
             null,
             null,
@@ -492,12 +497,10 @@ class QuiplashController extends Controller
                     [
                         [
                             (new InlineKeyboardButton())
-                                ->setText($answers[0]->getResponse())
+                                ->setText('A')
                                 ->setCallbackData('/vote_callback 0'),
-                        ],
-                        [
                             (new InlineKeyboardButton())
-                                ->setText($answers[1]->getResponse())
+                                ->setText('B')
                                 ->setCallbackData('/vote_callback 1'),
                         ]
                     ]
