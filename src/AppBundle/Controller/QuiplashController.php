@@ -382,6 +382,19 @@ class QuiplashController extends Controller
                 );
             } elseif ($game->getState() === Game::GATHER_ANSWERS) {
                 $this->sendGame($game);
+                $this->getClient()->sendMessage(
+                    $game->getChatGroup(),
+                    "The following people still need to provide an answer:\n".
+                    implode(
+                        "\n",
+                        array_map(
+                            function (Answer $answer) {
+                                return $answer->getUser()->getFirstName();
+                            },
+                            $game->getPendingAnswers()
+                        )
+                    )
+                );
             } elseif ($game->getState() === Game::GATHER_VOTES) {
                 $this->askToVoteOnCurrentQuestion($game);
             } elseif ($game->getState() === Game::END) {

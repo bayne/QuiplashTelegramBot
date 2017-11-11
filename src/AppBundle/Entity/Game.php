@@ -263,6 +263,13 @@ class Game
         return false;
     }
 
+    public function getPendingAnswers()
+    {
+        return $this->answers->filter(function (Answer $answer) {
+            return $answer->isPending();
+        })->toArray();
+    }
+
     public function getAnswersForCurrentQuestion()
     {
         $answers = [];
