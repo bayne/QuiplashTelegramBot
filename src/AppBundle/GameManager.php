@@ -12,6 +12,7 @@ use AppBundle\Entity\Exception\NoGameRunningException;
 use AppBundle\Entity\Exception\NotEnoughPlayersException;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\User;
+use AppBundle\Entity\ValueObject\WarningState;
 use AppBundle\Entity\Vote;
 use AppBundle\Repository\AnswerRepository;
 use AppBundle\Repository\GameRepository;
@@ -237,8 +238,10 @@ class GameManager
         }
 
         if ($game->getQuestions()->count() <= $nextQuestionIndex) {
+            $game->setWarningState(new WarningState(Game::END, Game::TIME_TO_VOTE));
             $game->setState(Game::END);
         } else {
+            $game->setWarningState(new WarningState(Game::GATHER_VOTES, Game::TIME_TO_VOTE));
             $game->setCurrentQuestion($game->getQuestions()->offsetGet($nextQuestionIndex));
         }
 
