@@ -2,9 +2,7 @@
 
 namespace AppBundle\Entity;
 
-use AppBundle\Entity\Exception\GameAlreadyExistsException;
 use AppBundle\Entity\ValueObject\WarningState;
-use AppBundle\Repository\GameRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -16,9 +14,9 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Game
 {
-    const TIME_TO_JOIN = 60;
-    const TIME_TO_ANSWER = 30;
-    const TIME_TO_VOTE = 30;
+    const TIME_TO_JOIN = 360;
+    const TIME_TO_ANSWER = 360;
+    const TIME_TO_VOTE = 120;
     
     const GATHER_USERS = 'gather_users';
     const GATHER_ANSWERS = 'gather_answers';
