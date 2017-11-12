@@ -50,12 +50,13 @@ services:
     camel_converter:
         class: Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter
     telegram_client:
-        class: Bayne\Telegram\Bot\Client
+        class: AppBundle\LoggedClient
         public: true
         arguments:
             - '@guzzle_client'
             - '%telegram_token%'
             - '@camel_converter'
+            - '@logger'
 
     # add more services, or override services that need manual wiring
     # AppBundle\Service\ExampleService:

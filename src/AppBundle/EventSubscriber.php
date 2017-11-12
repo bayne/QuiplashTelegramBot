@@ -92,6 +92,13 @@ class EventSubscriber implements EventSubscriberInterface
                 'json'
             );
 
+            $this->logger->info(
+                'Update',
+                [
+                    'update' => $this->serializer->serialize($update, 'json')
+                ]
+            );
+
             try {
 
                 $request->attributes->set(

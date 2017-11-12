@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/bayne/TelegramBotApi.git",
-                "reference": "451ceecd0ce6acdc96d8ab7aa29232bb16b95872"
+                "reference": "8e7ea6fd23e17724dc8876fb5a8a42ca8d6f3667"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bayne/TelegramBotApi/zipball/451ceecd0ce6acdc96d8ab7aa29232bb16b95872",
-                "reference": "451ceecd0ce6acdc96d8ab7aa29232bb16b95872",
+                "url": "https://api.github.com/repos/bayne/TelegramBotApi/zipball/8e7ea6fd23e17724dc8876fb5a8a42ca8d6f3667",
+                "reference": "8e7ea6fd23e17724dc8876fb5a8a42ca8d6f3667",
                 "shasum": ""
             },
             "require": {
@@ -38,7 +38,7 @@
                 }
             ],
             "description": "A telegram bot api client that is generated from the telegram schema",
-            "time": "2017-10-31T03:11:51+00:00"
+            "time": "2017-11-12T08:57:23+00:00"
         },
         {
             "name": "composer/ca-bundle",
