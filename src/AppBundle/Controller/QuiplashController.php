@@ -78,6 +78,7 @@ class QuiplashController extends Controller
             );
         }
 
+        return new Response();
     }
 
     /**
