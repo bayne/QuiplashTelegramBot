@@ -69,13 +69,16 @@ class QuiplashController extends Controller
         /** @var Game $game */
         foreach ($announceGames as $game) {
             $warningState = $game->getWarningState();
-            $this->getClient()->sendMessage(
-                $game->getChatGroup(),
-                sprintf(
-                    '%s seconds remaining!',
-                    $warningState->getWarningValue()
-                )
-            );
+            if ($warningState->getWarningValue() <= 30) {
+                $this->getClient()->sendMessage(
+                    $game->getChatGroup(),
+                    sprintf(
+                        '%s seconds remaining!',
+                        $warningState->getWarningValue()
+                    )
+                );
+            }
+
         }
 
         return new Response();
