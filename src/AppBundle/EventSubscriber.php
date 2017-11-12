@@ -129,7 +129,12 @@ class EventSubscriber implements EventSubscriberInterface
 
 
         } catch (UnexpectedValueException $e) {
-            $this->logger->critical($e->getMessage());
+            $this->logger->critical(
+                $e->getMessage(),
+                [
+                    'trace' => $e->getTraceAsString(), 'content' => $request->getContent()
+                ]
+            );
         }
 
     }
