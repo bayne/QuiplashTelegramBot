@@ -13,6 +13,7 @@ use AppBundle\Entity\Exception\NotEnoughPlayersException;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\User;
 use AppBundle\Entity\Vote;
+use AppBundle\Repository\AnswerRepository;
 use AppBundle\Repository\GameRepository;
 use AppBundle\Repository\QuestionRepository;
 
@@ -26,19 +27,26 @@ class GameManager
      * @var QuestionRepository
      */
     private $questionRepository;
+    /**
+     * @var AnswerRepository
+     */
+    private $answerRepository;
 
     /**
      * GameManager constructor.
      * @param GameRepository $gameRepository
      * @param QuestionRepository $questionRepository
+     * @param AnswerRepository $answerRepository
      */
     public function __construct(
         GameRepository $gameRepository,
-        QuestionRepository $questionRepository
+        QuestionRepository $questionRepository,
+        AnswerRepository $answerRepository
     ) {
         $this->gameRepository = $gameRepository;
         $this->questionRepository = $questionRepository;
         $this->lock();
+        $this->answerRepository = $answerRepository;
     }
 
     public function __destruct()
@@ -268,6 +276,7 @@ class GameManager
                     /** @var Answer $pendingAnswer */
                     foreach ($game->getPendingAnswers() as $pendingAnswer) {
                         $pendingAnswer->setResponse('(No Answer)');
+                        $this->answerRepository->updateAnswer($pendingAnswer);
                     }
                     $this->beginVoting($game);
                 } elseif ($game->getState() === Game::GATHER_VOTES) {

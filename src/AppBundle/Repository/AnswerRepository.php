@@ -1,6 +1,7 @@
 <?php
 
 namespace AppBundle\Repository;
+use AppBundle\Entity\Answer;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\User;
 use Doctrine\DBAL\LockMode;
@@ -37,6 +38,12 @@ class AnswerRepository extends \Doctrine\ORM\EntityRepository
         $persister->lock($criteria, LockMode::PESSIMISTIC_WRITE);
 
         return $persister->loadAll($criteria, $orderBy, $limit, $offset);
+    }
+
+    public function updateAnswer(Answer $answer)
+    {
+        $this->getEntityManager()->persist($answer);
+        $this->getEntityManager()->flush();
     }
 
 
