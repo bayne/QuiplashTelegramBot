@@ -82,6 +82,7 @@ class EventSubscriber implements EventSubscriberInterface
     public function onKernelRequest(GetResponseEvent $event)
     {
         $request = $event->getRequest();
+
         /** @var Update $update */
         try {
 
@@ -91,50 +92,54 @@ class EventSubscriber implements EventSubscriberInterface
                 'json'
             );
 
-            $request->attributes->set(
-                'update',
-                $update
-            );
-
-            if ($update->getMessage()) {
-                $request->attributes->set(
-                    'text',
-                    $update->getMessage()->getText()
-                );
+            try {
 
                 $request->attributes->set(
-                    'from',
-                    $update->getMessage()->getFrom()
+                    'update',
+                    $update
                 );
 
+                if ($update->getMessage()) {
+                    $request->attributes->set(
+                        'text',
+                        $update->getMessage()->getText()
+                    );
+
+                    $request->attributes->set(
+                        'from',
+                        $update->getMessage()->getFrom()
+                    );
+
+                }
+
+
+                if ($update->getCallbackQuery()) {
+
+                    $request->attributes->set(
+                        'game_short_name',
+                        $update->getCallbackQuery()->getGameShortName()
+                    );
+
+                    $request->attributes->set(
+                        'callback_data',
+                        $update->getCallbackQuery()->getData()
+                    );
+                    $request->attributes->set(
+                        'from',
+                        $update->getCallbackQuery()->getFrom()
+                    );
+                }
+            } catch (UnexpectedValueException $e) {
+                $this->logger->critical(
+                    $e->getMessage(),
+                    [
+                        'trace' => $e->getTraceAsString(), 'content' => $request->getContent()
+                    ]
+                );
             }
-
-
-            if ($update->getCallbackQuery()) {
-
-                $request->attributes->set(
-                    'game_short_name',
-                    $update->getCallbackQuery()->getGameShortName()
-                );
-
-                $request->attributes->set(
-                    'callback_data',
-                    $update->getCallbackQuery()->getData()
-                );
-                $request->attributes->set(
-                    'from',
-                    $update->getCallbackQuery()->getFrom()
-                );
-            }
-
 
         } catch (UnexpectedValueException $e) {
-            $this->logger->critical(
-                $e->getMessage(),
-                [
-                    'trace' => $e->getTraceAsString(), 'content' => $request->getContent()
-                ]
-            );
+
         }
 
     }

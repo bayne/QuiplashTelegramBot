@@ -35,6 +35,7 @@ class QuiplashController extends Controller
      * )
      *
      * @param Update $update
+     * @return Response
      */
     public function heartbeatAction(Request $request)
     {
