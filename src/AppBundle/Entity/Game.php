@@ -152,6 +152,24 @@ class Game
         $this->currentQuestion = $currentQuestion;
         return $this;
     }
+
+    public function getPreviousQuestion()
+    {
+        $prevQuestionIndex = -1;
+        foreach ($this->getQuestions() as $i => $question) {
+            if ($question->getId() === $this->getCurrentQuestion()->getId()) {
+                $prevQuestionIndex = $i - 1;
+                break;
+            }
+        }
+
+        if ($prevQuestionIndex < 0) {
+            return null;
+        } else {
+            return $this->getQuestions()->offsetGet($prevQuestionIndex);
+        }
+
+    }
     
 
     /**
@@ -268,11 +286,11 @@ class Game
         })->toArray();
     }
 
-    public function getAnswersForCurrentQuestion()
+    public function getAnswersForQuestion(Question $question)
     {
         $answers = [];
         foreach ($this->answers as $answer) {
-            if ($answer->getQuestion()->getId() === $this->currentQuestion->getId()) {
+            if ($answer->getQuestion()->getId() === $question->getId()) {
                 $answers[] = $answer;
             }
         }
@@ -282,6 +300,11 @@ class Game
         });
 
         return $answers;
+    }
+
+    public function getAnswersForCurrentQuestion()
+    {
+        return $this->getAnswersForQuestion($this->currentQuestion);
     }
 
     /**

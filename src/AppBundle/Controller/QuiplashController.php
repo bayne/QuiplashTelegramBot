@@ -47,6 +47,10 @@ class QuiplashController extends Controller
             } elseif ($expiredGame->getState() === Game::GATHER_ANSWERS) {
                 $this->sendGame($expiredGame);
             } elseif ($expiredGame->getState() === Game::GATHER_VOTES) {
+                $previousQuestion = $expiredGame->getPreviousQuestion();
+                if ($previousQuestion !== null) {
+                    $this->sendRoundResults($expiredGame, $expiredGame->getAnswersForQuestion($previousQuestion));
+                }
                 $this->askToVoteOnCurrentQuestion($expiredGame);
             } elseif ($expiredGame->getState() === Game::END) {
                 if (false === $expiredGame->hasEnoughUsers()) {
@@ -374,7 +378,7 @@ class QuiplashController extends Controller
 
             if (count($game->getMissingUserVotes()) === 0) {
 
-                $this->sendRoundResults($game);
+                $this->sendRoundResults($game, $game->getAnswersForCurrentQuestion());
 
                 $this->getDoctrine()->getManager()->clear();
                 $game = $this->getDoctrine()->getManager()->find(Game::class, $game->getId());
@@ -523,7 +527,8 @@ class QuiplashController extends Controller
     {
         return new GameManager(
             $this->getDoctrine()->getRepository(Game::class),
-            $this->getDoctrine()->getRepository(Question::class)
+            $this->getDoctrine()->getRepository(Question::class),
+            $this->getDoctrine()->getRepository(Answer::class)
         );
     }
 
@@ -613,11 +618,11 @@ class QuiplashController extends Controller
         );
     }
 
-    private function sendRoundResults(Game $game)
+    private function sendRoundResults(Game $game, array $answers)
     {
         $roundResults = '';
 
-        foreach ($game->getAnswersForCurrentQuestion() as $answer) {
+        foreach ($answers as $answer) {
             $roundResults .= "\n" . $answer->getResponse() . ' (' . $answer->getUser()->getFirstName() . ' +' . count($answer->getVotes()) . ')';
         }
 
