@@ -28,6 +28,11 @@ security:
             security: false
             stateless: true
 
+        heartbeat:
+            pattern: ^/telegram/quiplash/heartbeat
+            security: false
+            stateless: true
+
         main:
             pattern: ^/
             security: true

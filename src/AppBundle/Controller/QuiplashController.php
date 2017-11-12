@@ -29,6 +29,59 @@ class QuiplashController extends Controller
 
     /**
      * @Route(
+     *     name="heartbeat",
+     *     path="/telegram/quiplash/heartbeat",
+     *     methods={"GET"}
+     * )
+     *
+     * @param Update $update
+     */
+    public function heartbeatAction(Request $request)
+    {
+        $expiredGames = $this->getGameManager()->heartbeatExpiredGames();
+        
+        /** @var Game $expiredGame */
+        foreach ($expiredGames as $expiredGame) {
+            if ($expiredGame->getState() === Game::GATHER_USERS) {
+                throw new \RuntimeException('Cannot have an expired game in gather users state');
+            } elseif ($expiredGame->getState() === Game::GATHER_ANSWERS) {
+                $this->sendGame($expiredGame);
+            } elseif ($expiredGame->getState() === Game::GATHER_VOTES) {
+                $this->askToVoteOnCurrentQuestion($expiredGame);
+            } elseif ($expiredGame->getState() === Game::END) {
+                if (false === $expiredGame->hasEnoughUsers()) {
+                    $this->getClient()->sendMessage(
+                        $expiredGame->getChatGroup(),
+                        'Not enough users. Game has ended.'
+                    );
+                } else {
+                    $this->sendGameOver($expiredGame);
+                }
+            } else {
+                throw new \RuntimeException('Unknown state');
+            }
+        }
+
+        $this->getEntityManager()->clear();
+
+        $announceGames = $this->getGameManager()->heartbeatWarningStates();
+
+        /** @var Game $game */
+        foreach ($announceGames as $game) {
+            $warningState = $game->getWarningState();
+            $this->getClient()->sendMessage(
+                $game->getChatGroup(),
+                sprintf(
+                    '%s seconds remaining!',
+                    $warningState->getWarningValue()
+                )
+            );
+        }
+
+    }
+
+    /**
+     * @Route(
      *     name="new_game_command",
      *     path="/telegram/quiplash",
      *     methods={"POST"},
@@ -316,32 +369,15 @@ class QuiplashController extends Controller
             $game = $this->getGameManager()->getCurrentGame($game->getChatGroup());
 
             if (count($game->getMissingUserVotes()) === 0) {
-                $roundResults = '';
 
-                foreach ($game->getAnswersForCurrentQuestion() as $answer) {
-                    $roundResults .= "\n" . $answer->getResponse() . ' (' . $answer->getUser()->getFirstName() . ' +' . count($answer->getVotes()) . ')';
-                }
-
-                $this->getClient()->sendMessage(
-                    $game->getChatGroup(),
-                    $roundResults
-                );
+                $this->sendRoundResults($game);
 
                 $this->getDoctrine()->getManager()->clear();
                 $game = $this->getDoctrine()->getManager()->find(Game::class, $game->getId());
                 $this->getGameManager()->advanceGame($game);
 
                 if ($game->getState() === Game::END) {
-                    $scoreBoard = $game->getScoreBoard();
-                    $gameOver = 'Game Over! Winner: ' . reset($scoreBoard)['user']->getFirstName();
-                    foreach ($scoreBoard as $score) {
-                        $gameOver .= "\n" . $score['user']->getFirstName() . ': ' . $score['points'] . " pts";
-                    }
-
-                    $this->getClient()->sendMessage(
-                        $game->getChatGroup(),
-                        $gameOver
-                    );
+                    $this->sendGameOver($game);
                 } else {
                     $this->askToVoteOnCurrentQuestion($game);
                 }
@@ -570,6 +606,34 @@ class QuiplashController extends Controller
                         ]
                     ]
                 )
+        );
+    }
+
+    private function sendRoundResults(Game $game)
+    {
+        $roundResults = '';
+
+        foreach ($game->getAnswersForCurrentQuestion() as $answer) {
+            $roundResults .= "\n" . $answer->getResponse() . ' (' . $answer->getUser()->getFirstName() . ' +' . count($answer->getVotes()) . ')';
+        }
+
+        $this->getClient()->sendMessage(
+            $game->getChatGroup(),
+            $roundResults
+        );
+    }
+
+    private function sendGameOver(Game $game)
+    {
+        $scoreBoard = $game->getScoreBoard();
+        $gameOver = 'Game Over! Winner: ' . reset($scoreBoard)['user']->getFirstName();
+        foreach ($scoreBoard as $score) {
+            $gameOver .= "\n" . $score['user']->getFirstName() . ': ' . $score['points'] . " pts";
+        }
+
+        $this->getClient()->sendMessage(
+            $game->getChatGroup(),
+            $gameOver
         );
     }
 

@@ -249,4 +249,62 @@ class GameManager
 
         return $game;
     }
+
+    public function heartbeatExpiredGames()
+    {
+        $games = $this->gameRepository->getAllActiveGames();
+        $currentTime = new \DateTime();
+        $expiredGames = [];
+        /** @var Game $game */
+        foreach ($games as $game) {
+            if ($game->isExpired($currentTime)) {
+                if ($game->getState() === Game::GATHER_USERS) {
+                    try {
+                        $this->beginGame($game->getChatGroup());
+                    } catch (NotEnoughPlayersException $e) {
+                        $this->endGameForGroup($game->getChatGroup());
+                    }
+                } elseif ($game->getState() === Game::GATHER_ANSWERS) {
+                    /** @var Answer $pendingAnswer */
+                    foreach ($game->getPendingAnswers() as $pendingAnswer) {
+                        $pendingAnswer->setResponse('(No Answer)');
+                    }
+                    $this->beginVoting($game);
+                } elseif ($game->getState() === Game::GATHER_VOTES) {
+                    $this->advanceGame($game);
+                } elseif ($game->getState() === Game::END) {
+                    throw new \RuntimeException('Heartbeat should not be called on ended games');
+                } else {
+                    throw new \RuntimeException('Unknown state');
+                }
+                $this->gameRepository->updateGame($game);
+                $expiredGames[] = $game;
+            }
+        }
+
+        return $expiredGames;
+    }
+
+    public function heartbeatWarningStates()
+    {
+        $games = $this->gameRepository->getAllActiveGames();
+        $currentTime = new \DateTime();
+        $gamesToAnnounce = [];
+        /** @var Game $game */
+        foreach ($games as $game) {
+            $warningState = $game->getWarningState();
+            $warningStateToAnnounce = $game->warningStateToAnnounce($currentTime);
+            if (!$warningState->equals($warningStateToAnnounce) && false === $game->isExpired($currentTime)) {
+                $gamesToAnnounce[] = $game;
+                $game
+                    ->setWarningState($warningStateToAnnounce);
+                $this->gameRepository->updateGame($game);
+            } else {
+                // do nothing
+            }
+        }
+
+        return $gamesToAnnounce;
+    }
+
 }
