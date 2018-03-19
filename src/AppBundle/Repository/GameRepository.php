@@ -59,6 +59,7 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
     {
         return $this->createQueryBuilder('g')
             ->where("g.state != 'end'")
+            ->andWhere('g.hasTimer = 1')
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->execute()

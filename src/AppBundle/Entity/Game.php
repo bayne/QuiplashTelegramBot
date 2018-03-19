@@ -109,13 +109,21 @@ class Game
      * @ORM\Embedded(class="AppBundle\Entity\ValueObject\WarningState")
      */
     private $warningState;
-    
+
+    /**
+     * @var bool
+     *
+     * @ORM\Column(type="boolean")
+     */
+    private $hasTimer = true;
+
     /**
      * Game constructor.
      * @param User $host
      * @param $chatGroup
+     * @param bool $hasTimer
      */
-    public function __construct(User $host, $chatGroup)
+    public function __construct(User $host, $chatGroup, $hasTimer = true)
     {
         $this->lastUpdated = new \DateTime();
         $this->answers = new ArrayCollection();
@@ -131,6 +139,7 @@ class Game
             $this->state,
             60
         );
+        $this->hasTimer = $hasTimer;
     }
 
     /**
@@ -471,6 +480,10 @@ class Game
     
     public function isExpired(\DateTime $current)
     {
+        if (false === $this->hasTimer()) {
+            return false;
+        }
+
         $current = $current->getTimestamp();
         
         if (!$this->gatheringVotesStarted) {
@@ -509,6 +522,10 @@ class Game
     
     public function getSecondsRemaining(\DateTime $current)
     {
+        if (false === $this->hasTimer()) {
+            return INF;
+        }
+
         $current = $current->getTimestamp();
         if ($this->state === self::GATHER_ANSWERS) {
             return self::TIME_TO_ANSWER - ($current - $this->gatheringAnswersStarted->getTimestamp());
@@ -551,6 +568,10 @@ class Game
 
     public function warningStateToAnnounce(\DateTime $currentTime)
     {
+        if (false === $this->hasTimer()) {
+            throw new \UnexpectedValueException('Should not announce warning state if the game has no timer');
+        }
+
         $timestamp = $currentTime->getTimestamp();
         $warningState = $this->getWarningState();
         if ($warningState->getState() === self::GATHER_ANSWERS) {
@@ -613,6 +634,14 @@ class Game
             }
         }
         return false;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasTimer(): bool
+    {
+        return $this->hasTimer;
     }
 
 }

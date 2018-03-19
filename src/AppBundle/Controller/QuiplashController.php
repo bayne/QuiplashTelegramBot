@@ -103,9 +103,21 @@ class QuiplashController extends Controller
     public function newGameAction(Update $update)
     {
         try {
+
+            $message = $update->getMessage()->getText();
+
+            $message = trim($message);
+
+            if ($message === '/new notimer') {
+                $hasTimer = false;
+            } else {
+                $hasTimer = true;
+            }
+
             $game = $this->getGameManager()->newGame(
                 $this->getUser(),
-                $update->getMessage()->getChat()->getId()
+                $update->getMessage()->getChat()->getId(),
+                $hasTimer
             );
 
             $game = $this->getGameManager()->joinGame(

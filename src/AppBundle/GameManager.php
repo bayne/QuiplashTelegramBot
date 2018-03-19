@@ -66,7 +66,7 @@ class GameManager
         $this->gameRepository->commit();
     }
 
-    public function newGame(User $host, $chatGroupId)
+    public function newGame(User $host, $chatGroupId, $hasTimer = true)
     {
         $games =
             array_filter(
@@ -82,7 +82,8 @@ class GameManager
 
         $game = new Game(
             $host,
-            $chatGroupId
+            $chatGroupId,
+            $hasTimer
         );
 
         $this->gameRepository->updateGame($game);
