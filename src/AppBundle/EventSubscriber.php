@@ -92,7 +92,7 @@ class EventSubscriber implements EventSubscriberInterface
                 'json'
             );
 
-            $this->logger->info(
+            $this->logger->debug(
                 'Update',
                 [
                     'update' => $this->serializer->serialize($update, 'json')
@@ -117,6 +117,12 @@ class EventSubscriber implements EventSubscriberInterface
                         $update->getMessage()->getFrom()
                     );
 
+                    $this->logger->info(
+                        'Update '.$update->getMessage()->getText(),
+                        [
+                            'update' => $this->serializer->serialize($update, 'json')
+                        ]
+                    );
                 }
 
 
@@ -135,7 +141,15 @@ class EventSubscriber implements EventSubscriberInterface
                         'from',
                         $update->getCallbackQuery()->getFrom()
                     );
+                    $this->logger->info(
+                        'Update '.$update->getCallbackQuery()->getData(),
+                        [
+                            'update' => $this->serializer->serialize($update, 'json')
+                        ]
+                    );
                 }
+
+
             } catch (UnexpectedValueException $e) {
                 $this->logger->critical(
                     $e->getMessage(),
