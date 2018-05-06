@@ -17,6 +17,7 @@ use AppBundle\Entity\Vote;
 use AppBundle\Repository\AnswerRepository;
 use AppBundle\Repository\GameRepository;
 use AppBundle\Repository\QuestionRepository;
+use Psr\Log\LoggerInterface;
 
 class GameManager
 {
@@ -32,22 +33,29 @@ class GameManager
      * @var AnswerRepository
      */
     private $answerRepository;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * GameManager constructor.
      * @param GameRepository $gameRepository
      * @param QuestionRepository $questionRepository
      * @param AnswerRepository $answerRepository
+     * @param LoggerInterface $logger
      */
     public function __construct(
         GameRepository $gameRepository,
         QuestionRepository $questionRepository,
-        AnswerRepository $answerRepository
+        AnswerRepository $answerRepository,
+        LoggerInterface $logger
     ) {
         $this->gameRepository = $gameRepository;
         $this->questionRepository = $questionRepository;
         $this->lock();
         $this->answerRepository = $answerRepository;
+        $this->logger = $logger;
     }
 
     public function __destruct()
@@ -179,6 +187,18 @@ class GameManager
                 base64_encode(random_bytes(16))
             );
         }
+
+        $this->logger->debug(
+            'Generated tokens for users',
+            [
+                'tokens' => array_map(function (Answer $answer) {
+                    return [
+                        'user' => $answer->getUser()->getUsername(),
+                        'token' => $answer->getToken()
+                    ];
+                }, $answers)
+            ]
+        );
 
         foreach ($answers as $answer) {
             $game->getAnswers()->add($answer);

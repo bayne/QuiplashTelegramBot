@@ -364,9 +364,17 @@ class QuiplashController extends Controller
         /** @var Game $game */
         $game = $this->getGameManager()->getCurrentGame($update->getCallbackQuery()->getMessage()->getChat()->getId());
         $answers = $game->getAnswersForCurrentQuestion();
+        if (false === key_exists($choice, $answers)) {
+            throw new \RuntimeException('Invalid key for answer '.$choice.' '.json_encode(array_keys($answers)));
+        }
         $answer = $answers[$choice];
 
-        if ($game->alreadyVoted($this->getUser())) {
+        if (false === $game->getUsers()->contains($this->getUser())) {
+            $this->getClient()->answerCallbackQuery(
+                $update->getCallbackQuery()->getId(),
+                'You aren\'t in this game'
+            );
+        } elseif ($game->alreadyVoted($this->getUser())) {
             $this->getClient()->answerCallbackQuery(
                 $update->getCallbackQuery()->getId(),
                 'You can\'t vote more than once'
@@ -542,7 +550,8 @@ class QuiplashController extends Controller
         return new GameManager(
             $this->getDoctrine()->getRepository(Game::class),
             $this->getDoctrine()->getRepository(Question::class),
-            $this->getDoctrine()->getRepository(Answer::class)
+            $this->getDoctrine()->getRepository(Answer::class),
+            $this->getLogger()
         );
     }
 
@@ -553,10 +562,13 @@ class QuiplashController extends Controller
 
     private function askToVoteOnCurrentQuestion(Game $game)
     {
+        /** @var Answer[] $answers */
         $answers = $game->getAnswersForCurrentQuestion();
+        $answerA = reset($answers);
+        $answerB = next($answers);
         $prompt = $game->getCurrentQuestion()->getText().":\n"
-            .'A: '.$answers[0]->getResponse()."\n"
-            .'B: '.$answers[1]->getResponse()
+            .'A: '.$answerA->getResponse()."\n"
+            .'B: '.$answerB->getResponse()
         ;
 
         $this->getClient()->sendMessage(
@@ -572,10 +584,10 @@ class QuiplashController extends Controller
                         [
                             (new InlineKeyboardButton())
                                 ->setText('A')
-                                ->setCallbackData('/vote_callback 0'),
+                                ->setCallbackData('/vote_callback '.$answerA->getId()),
                             (new InlineKeyboardButton())
                                 ->setText('B')
-                                ->setCallbackData('/vote_callback 1'),
+                                ->setCallbackData('/vote_callback '.$answerB->getId()),
                         ]
                     ]
                 )

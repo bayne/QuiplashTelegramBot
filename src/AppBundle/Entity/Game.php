@@ -300,11 +300,11 @@ class Game
         $answers = [];
         foreach ($this->answers as $answer) {
             if ($answer->getQuestion()->getId() === $question->getId()) {
-                $answers[] = $answer;
+                $answers[$answer->getId()] = $answer;
             }
         }
 
-        usort($answers, function (Answer $a, Answer $b) {
+        uasort($answers, function (Answer $a, Answer $b) {
             return $a->getId() - $b->getId();
         });
 
