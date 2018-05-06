@@ -108,10 +108,10 @@ class QuiplashController extends Controller
 
             $message = trim($message);
 
-            if ($message === '/new notimer') {
-                $hasTimer = false;
-            } else {
+            if ($message === '/new timer') {
                 $hasTimer = true;
+            } else {
+                $hasTimer = false;
             }
 
             $game = $this->getGameManager()->newGame(
