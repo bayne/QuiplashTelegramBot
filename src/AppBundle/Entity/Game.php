@@ -445,7 +445,7 @@ class Game
             $points[$answer->getUser()->getId()]['points'] += count($answer->getVotes());
         }
         
-        usort($points, function ($a, $b) {
+        uasort($points, function ($a, $b) {
             return $b['points'] - $a['points'];
         });
         

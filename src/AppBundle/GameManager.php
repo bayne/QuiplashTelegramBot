@@ -340,4 +340,36 @@ class GameManager
         return $gamesToAnnounce;
     }
 
+    public function getTopScores($chatId)
+    {
+        $games = $this->gameRepository->findBy(
+            [
+                'chatGroup' => $chatId,
+                'state' => Game::END
+            ]
+        );
+
+        $topScores = [];
+        /** @var Game $game */
+        foreach ($games as $game) {
+            $scoreBoard = $game->getScoreBoard();
+            foreach ($scoreBoard as $userId => $score) {
+                $points = 0;
+                if (isset($topScores[$userId])) {
+                    $points = $topScores[$userId]['points'];
+                }
+                $topScores[$userId] = [
+                    'user' => $score['user'],
+                    'points' => $score['points'] + $points
+                ];
+            }
+        }
+
+        uasort($topScores, function ($a, $b) {
+            return $b['points'] - $a['points'];
+        });
+
+        return [$topScores, count($games)];
+    }
+
 }

@@ -91,6 +91,34 @@ class QuiplashController extends Controller
 
     /**
      * @Route(
+     *     name="top_scores_command",
+     *     path="/telegram/quiplash",
+     *     methods={"POST"},
+     *     condition="request.attributes.get('text') matches '<^/top>'"
+     * )
+     *
+     * @param Update $update
+     * @return Response
+     */
+    public function topScoresAction(Update $update)
+    {
+        list($scoreBoard, $gameCount) = $this->getGameManager()->getTopScores($update->getMessage()->getChat()->getId());
+
+        $gameOver = 'Leader Board (Total Games: '.$gameCount.')';
+        foreach ($scoreBoard as $score) {
+            $gameOver .= "\n" . $score['user']->getFirstName() . ': ' . $score['points'] . " pts";
+        }
+
+        $this->getClient()->sendMessage(
+            $update->getMessage()->getChat()->getId(),
+            $gameOver
+        );
+
+        return new Response();
+    }
+
+    /**
+     * @Route(
      *     name="new_game_command",
      *     path="/telegram/quiplash",
      *     methods={"POST"},
