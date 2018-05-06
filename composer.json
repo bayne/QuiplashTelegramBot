@@ -27,13 +27,14 @@
         }
     ],
     "require": {
-        "php": ">=5.5.9",
+        "php": "7.1.*",
         "bayne/telegram-bot-api": "dev-master",
         "doctrine/doctrine-bundle": "^1.6",
         "doctrine/doctrine-migrations-bundle": "^1.2",
         "doctrine/orm": "^2.5",
         "graylog2/gelf-php": "^1.5",
         "incenteev/composer-parameter-handler": "^2.0",
+        "nvanheuverzwijn/monolog-logdna": "dev-master",
         "phpunit/phpunit": "^6.4",
         "sensio/distribution-bundle": "^5.0.19",
         "sensio/framework-extra-bundle": "^3.0.2",

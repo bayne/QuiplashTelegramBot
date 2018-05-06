@@ -510,8 +510,9 @@ class QuiplashController extends Controller
      * @param Update $update
      * @return Response
      */
-    public function missingCommandAction(Update $update)
+    public function missingCommandAction(Request $request, Update $update)
     {
+        $this->getLogger()->warning('This was not a valid command', ['text' => json_decode($request->getContent())]);
         return new Response();
     }
 

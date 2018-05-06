@@ -7,6 +7,7 @@ use AppBundle\AppBundle;
 use AppBundle\Entity\Game;
 use AppBundle\Entity\Question;
 use AppBundle\GameManager;
+use AppBundle\TelegramEmulator;
 use Bayne\Serializer\Normalizer\GetSetExcludeNormalizer;
 use Bayne\Telegram\Bot\Client;
 use Bayne\Telegram\Bot\Object\CallbackQuery;
@@ -15,6 +16,7 @@ use Bayne\Telegram\Bot\Object\Message;
 use Bayne\Telegram\Bot\Object\Update;
 use Bayne\Telegram\Bot\Object\User;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
@@ -24,7 +26,6 @@ use AppBundle\Entity;
 
 class QuiplashControllerTest extends WebTestCase
 {
-
     /**
      * @var Serializer
      */
@@ -33,13 +34,15 @@ class QuiplashControllerTest extends WebTestCase
      * @var \Symfony\Bundle\FrameworkBundle\Client
      */
     private $client;
+
     /**
-     * @var Client
+     * @var EntityManager
      */
-    private $telegramClient;
-    private $updateId = 0;
-    private $users = [];
     private $em;
+    /**
+     * @var TelegramEmulator
+     */
+    private $telegramEmulator;
 
     private function getQuestion()
     {
@@ -52,17 +55,6 @@ class QuiplashControllerTest extends WebTestCase
 
     protected function setUp()
     {
-        $this->serializer = new Serializer(
-            [
-                new GetSetExcludeNormalizer(
-                    null,
-                    new CamelCaseToSnakeCaseNameConverter()
-                )
-            ],
-            [
-                new JsonEncoder()
-            ]
-        );
         $this->client = self::createClient();
 
         $this->em = $this->client->getContainer()->get('doctrine')->getManager();
@@ -71,78 +63,24 @@ class QuiplashControllerTest extends WebTestCase
         $schemaTool->dropSchema($metaDatas);
         $schemaTool->createSchema($metaDatas);
 
-
         for ($i = 0; $i < 1000; $i++) {
             $this->em->persist((new Question('text')));
         }
         $this->em->flush();
 
-
-    }
-
-    public function getUser($name)
-    {
-        $user = $this->users[$name] ?? (new User())
-            ->setFirstName($name)
-            ->setLastName($name)
-            ->setIsBot(false)
-            ->setId(count($this->users)+1)
-            ->setUsername($name)
-        ;
-
-        $this->users[$name] = $user;
-        return $user;
-    }
-
-    public function userSays($name, $text, $isCallback = false)
-    {
-
-        $user = $this->getUser($name);
-
-        $message = (new Message())
-            ->setFrom($user)
-            ->setText($text)
-            ->setChat((new Chat())->setId(1));
-
-        $update = new Update();
-        $update->setUpdateId($this->updateId++);
-        if ($isCallback) {
-            $update
-                ->setCallbackQuery(
-                    (new CallbackQuery())
-                        ->setFrom($user)
-                        ->setData($text)
-                        ->setMessage($message)
-                )
-            ;
-        } else {
-            $update
-                ->setMessage($message)
-            ;
-        }
-
-        $crawler = $this->client->request(
-            'post',
-            '/telegram/quiplash',
-            [],
-            [],
-            [],
-            $this->serializer->serialize(
-                $update,
-                'json'
-            )
+        $this->telegramEmulator = new TelegramEmulator(
+            $this->em,
+            $this->client
         );
 
-        $this->em->clear();
-        $this->em->flush();
     }
 
-    public function userResponds($name)
+    public function userResponds($name, $response = null)
     {
         $this->em->clear();
         $answerRepository = $this->client->getContainer()->get('doctrine')->getRepository(Entity\Answer::class);
         $answers = $answerRepository->findBy([
-            'user'  => $this->getUser($name)->getId()
+            'user'  => $this->telegramEmulator->getUser($name)->getId()
         ]);
         /** @var Entity\Answer $answer */
         foreach ($answers as $answer) {
@@ -152,11 +90,16 @@ class QuiplashControllerTest extends WebTestCase
                     [
                         'form' => [
                             'submit' => 1,
-                            'response' => 'text',
+                            'response' => $response ?? 'text',
                         ]
                     ]
             );
         }
+    }
+
+    public function userSays($name, $text, $isCallback = false)
+    {
+        $this->telegramEmulator->userSays($name, $text, $isCallback);
     }
 
     public function testFullGame()
@@ -169,7 +112,7 @@ class QuiplashControllerTest extends WebTestCase
         $this->userResponds('alice');
         $this->userResponds('bob');
         $this->userResponds('charlie');
-//
+
         $this->userSays('alice', '/vote_callback 1', true);
         $this->userSays('bob', '/vote_callback 1', true);
         $this->userSays('charlie', '/vote_callback 1', true);

@@ -1,41 +1,69 @@
 imports:
-    - { resource: config.yml }
+    - { resource: parameters.yml }
+    - { resource: security.yml }
+    - { resource: services.yml }
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+    locale: en
+
+services:
+    telegram_client:
+        class: AppBundle\StubClient
+        arguments:
+            - '@logger'
 
 framework:
+    #esi: ~
+    #translator: { fallbacks: ['%locale%'] }
+    secret: '%secret%'
     router:
         resource: '%kernel.project_dir%/app/config/routing_dev.yml'
-        strict_requirements: true
-    profiler: { only_exceptions: false }
+        strict_requirements: ~
+    form: ~
+    csrf_protection: ~
+    validation: { enable_annotations: true }
+    serializer: { enable_annotations: true }
+    property_info: { enabled: true }
+    templating:
+        engines: ['twig']
+    default_locale: '%locale%'
+    trusted_hosts: ~
+    session:
+        # https://symfony.com/doc/current/reference/configuration/framework.html#handler-id
+        handler_id: session.handler.native_file
+        save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
+    fragments: ~
+    http_method_override: true
+    assets: ~
+    php_errors:
+        log: true
 
-web_profiler:
-    toolbar: true
-    intercept_redirects: false
+# Twig Configuration
+twig:
+    debug: '%kernel.debug%'
+    strict_variables: '%kernel.debug%'
+
+# Doctrine Configuration
+doctrine:
+    dbal:
+        driver: pdo_sqlite
+        path: "%kernel.project_dir%/var/data/data_dev.sqlite"
+        charset: UTF8
+
+    orm:
+        auto_generate_proxy_classes: '%kernel.debug%'
+        naming_strategy: doctrine.orm.naming_strategy.underscore
+        auto_mapping: true
 
 monolog:
     handlers:
-        main:
-            type: stream
-            path: '%kernel.logs_dir%/%kernel.environment%.log'
-            level: debug
-            channels: ['!event']
         console:
             type: console
             process_psr_3_messages: false
-            channels: ['!event', '!doctrine', '!console']
-        # To follow logs in real time, execute the following command:
-        # `bin/console server:log -vv`
-        server_log:
-            type: server_log
-            process_psr_3_messages: false
-            host: 127.0.0.1:9911
-        # uncomment to get logging in your browser
-        # you may have to allow bigger header sizes in your Web server configuration
-        #firephp:
-        #    type: firephp
-        #    level: info
-        #chromephp:
-        #    type: chromephp
-        #    level: info
-
-#swiftmailer:
-#    delivery_addresses: ['me@example.com']
+            channels:
+              - '!event'
+              - '!security'
+              - '!doctrine'
+              - '!request'
