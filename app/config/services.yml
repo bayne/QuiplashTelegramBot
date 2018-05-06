@@ -15,6 +15,12 @@ services:
         arguments:
             - '@app.graylog.transport'
 
+    app.logdna.handler:
+        class: Zwijn\Monolog\Handler\LogdnaHandler
+        arguments:
+            - '%logdna_token%'
+            - 'quiplash_telegram_bot'
+
     # default configuration for services in *this* file
     _defaults:
         # automatically injects dependencies in your services

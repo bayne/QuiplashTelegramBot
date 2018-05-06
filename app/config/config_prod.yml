@@ -15,6 +15,10 @@ monolog:
             publisher:
                 id: app.graylog.publisher
             level: debug
+        logdna:
+            type: service
+            id: app.logdna.handler
+            channels: ['app']
         main:
             type: error_log
             level: debug
