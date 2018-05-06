@@ -259,8 +259,14 @@ class GameManager
         }
 
         if ($game->getQuestions()->count() <= $nextQuestionIndex) {
-            $game->setWarningState(new WarningState(Game::END, Game::TIME_TO_VOTE));
-            $game->setState(Game::END);
+            if ($game->hasTie()) {
+                $question = $this->questionRepository->getTieBreakerQuestion($game->getQuestions()->toArray());
+
+
+            } else {
+                $game->setWarningState(new WarningState(Game::END, Game::TIME_TO_VOTE));
+                $game->setState(Game::END);
+            }
         } else {
             $game->setWarningState(new WarningState(Game::GATHER_VOTES, Game::TIME_TO_VOTE));
             $game->setCurrentQuestion($game->getQuestions()->offsetGet($nextQuestionIndex));

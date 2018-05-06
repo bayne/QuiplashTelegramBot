@@ -644,5 +644,23 @@ class Game
         return $this->hasTimer;
     }
 
+    public function getTiedUsers()
+    {
+        $scoreBoard = $this->getScoreBoard();
+        $topScore = reset($scoreBoard)['points'];
+
+        $tied = array_filter($scoreBoard, function ($score) use ($topScore) {
+            return $score['points'] === $topScore;
+        });
+
+        return array_column($tied, 'user');
+    }
+
+    public function hasTie(): bool
+    {
+        $users = $this->getTiedUsers();
+        return count($users) > 1;
+    }
+
 }
 

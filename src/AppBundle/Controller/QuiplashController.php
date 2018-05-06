@@ -661,7 +661,7 @@ class QuiplashController extends Controller
     private function sendGameOver(Game $game)
     {
         $scoreBoard = $game->getScoreBoard();
-        $gameOver = 'Game Over! Winner: ' . reset($scoreBoard)['user']->getFirstName();
+        $gameOver = 'Winner: ' . reset($scoreBoard)['user']->getFirstName();
         foreach ($scoreBoard as $score) {
             $gameOver .= "\n" . $score['user']->getFirstName() . ': ' . $score['points'] . " pts";
         }

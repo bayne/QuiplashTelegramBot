@@ -2,6 +2,8 @@
 
 namespace AppBundle\Repository;
 
+use AppBundle\Entity\Question;
+
 /**
  * QuestionRepository
  *
@@ -15,5 +17,23 @@ class QuestionRepository extends \Doctrine\ORM\EntityRepository
         $questions = $this->findBy([],null);
         shuffle($questions);
         return array_slice($questions, 0, $userCount);
+    }
+
+    /**
+     * @param $existingQuestions
+     * @return Question
+     */
+    public function getTieBreakerQuestion($existingQuestions)
+    {
+        $possibleQuestions = $this
+            ->createQueryBuilder('q')
+            ->where('q.id NOT IN (:questions)')
+            ->setParameter('questions', $existingQuestions)
+            ->getQuery()
+            ->execute()
+        ;
+
+        shuffle($possibleQuestions);
+        return reset($possibleQuestions);
     }
 }
