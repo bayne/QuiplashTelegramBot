@@ -1,6 +1,7 @@
 <?php
 
 namespace AppBundle\Repository;
+
 use AppBundle\Entity\User;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
@@ -27,9 +28,16 @@ class UserRepository extends EntityRepository implements UserLoaderInterface
     public function loadUserByUsername($username)
     {
         /** @var User $user */
-        $user = $this->findOneBy(array('username' => $username));
+        $users = $this->createQueryBuilder('u')
+            ->where('u.username = :username')
+            ->orWhere('u.id = :username')
+            ->setParameter('username', $username)
+            ->orderBy('u.id', 'asc')
+            ->getQuery()
+            ->execute();
+        $user = reset($users);
 
-        if (null === $user) {
+        if (false === $user) {
             throw new UsernameNotFoundException(sprintf('User "%s" not found.', $username));
         }
 

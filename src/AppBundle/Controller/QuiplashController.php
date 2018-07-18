@@ -6,6 +6,7 @@ use AppBundle\Entity\Answer;
 use AppBundle\Entity\Exception\AlreadyInTheGameException;
 use AppBundle\Entity\Exception\GameException;
 use AppBundle\Entity\Exception\NoAnswersForUserException;
+use Symfony\Component\Routing\Annotation\Route;
 use AppBundle\Entity\Exception\NoGameRunningException;
 use AppBundle\Entity\Exception\NotEnoughPlayersException;
 use AppBundle\Entity\Game;
@@ -21,7 +22,6 @@ use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class QuiplashController extends Controller
