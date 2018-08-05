@@ -335,6 +335,7 @@ class QuiplashController extends Controller
 
         if ($form->get('submit')->isClicked()) {
             if ($form->isValid()) {
+                $this->getGameManager()->lock();
                 $this->getDoctrine()->getManager()->persist($answer);
                 $this->getDoctrine()->getManager()->flush();
                 try {
@@ -351,7 +352,8 @@ class QuiplashController extends Controller
                     );
 
                 } catch (NoAnswersForUserException $e) {
-                    $game = $answer->getGame();
+                    $this->getDoctrine()->getManager()->clear();
+                    $game = $this->getGameManager()->getCurrentGame($answer->getGame()->getChatGroup());
 
                     if ($game->allAnswersAreIn()) {
                         $this->getGameManager()->beginVoting($game);
@@ -361,6 +363,8 @@ class QuiplashController extends Controller
                     return $this->render(
                         'quiplash/done.html.twig'
                     );
+                } finally {
+                    $this->getGameManager()->unlock();
                 }
 
             }
@@ -492,6 +496,21 @@ class QuiplashController extends Controller
                 );
             } elseif ($game->getState() === Game::GATHER_VOTES) {
                 $this->askToVoteOnCurrentQuestion($game);
+                $this->getClient()->sendMessage(
+                    $game->getChatGroup(),
+                    "The following people still need to vote on an answer:\n".
+                    implode(
+                        "\n",
+                        array_unique(
+                            array_map(
+                                function (User $user) {
+                                    return $user->getFirstName();
+                                },
+                                $game->getMissingUserVotes()
+                            )
+                        )
+                    )
+                );
             } elseif ($game->getState() === Game::END) {
                 $this->getClient()->sendMessage(
                     $game->getChatGroup(),
