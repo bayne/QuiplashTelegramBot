@@ -64,6 +64,7 @@ class Game
      * @var Question[]|ArrayCollection
      * 
      * @ORM\ManyToMany(targetEntity="AppBundle\Entity\Question", cascade={"persist"})
+     * @ORM\OrderBy(value={"id" = "ASC"})
      */
     private $questions;
 
