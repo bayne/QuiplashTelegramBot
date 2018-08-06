@@ -478,22 +478,33 @@ class QuiplashController extends Controller
                     $this->getJoinKeyboard()
                 );
             } elseif ($game->getState() === Game::GATHER_ANSWERS) {
-                $this->sendGame($game);
-                $this->getClient()->sendMessage(
-                    $game->getChatGroup(),
-                    "The following people still need to provide an answer:\n".
-                    implode(
-                        "\n",
-                        array_unique(
-                            array_map(
-                                function (Answer $answer) {
-                                    return $answer->getUser()->getFirstName();
-                                },
-                                $game->getPendingAnswers()
+
+                if ($game->allAnswersAreIn()) {
+                    // dis is a hack
+                    // for some reason it gets stuck in this state. using the status
+                    // command to shake it loose
+                    // there are two commits, havent' tested to see if the other change actually
+                    // fixed it
+                    $this->getGameManager()->beginVoting($game);
+                    $this->askToVoteOnCurrentQuestion($game);
+                } else {
+                    $this->sendGame($game);
+                    $this->getClient()->sendMessage(
+                        $game->getChatGroup(),
+                        "The following people still need to provide an answer:\n".
+                        implode(
+                            "\n",
+                            array_unique(
+                                array_map(
+                                    function (Answer $answer) {
+                                        return $answer->getUser()->getFirstName();
+                                    },
+                                    $game->getPendingAnswers()
+                                )
                             )
                         )
-                    )
-                );
+                    );
+                }
             } elseif ($game->getState() === Game::GATHER_VOTES) {
                 $this->askToVoteOnCurrentQuestion($game);
                 $this->getClient()->sendMessage(
