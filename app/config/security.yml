@@ -33,6 +33,11 @@ security:
             security: false
             stateless: true
 
+        rabbit:
+            pattern: ^/7B7a5dvSd4qf9sx9
+            security: false
+            stateless: true
+
         main:
             pattern: ^/
             security: true

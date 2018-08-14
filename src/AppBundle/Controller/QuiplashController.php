@@ -26,6 +26,20 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class QuiplashController extends Controller
 {
+    /**
+     * @Route(
+     *     name="rabbit",
+     *     path="/7B7a5dvSd4qf9sx9",
+     *     methods={"GET"}
+     * )
+     *
+     * @return Response
+     */
+    public function rabbitAction(Request $request)
+    {
+        $this->getLogger()->critical("Rabbit", ["request" => (string) $request, "server" => json_encode($request->server->all())]);
+        return new Response('', 404);
+    }
 
     /**
      * @Route(
