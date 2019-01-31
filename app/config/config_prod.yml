@@ -10,11 +10,6 @@ imports:
 
 monolog:
     handlers:
-        graylog:
-            type: gelf
-            publisher:
-                id: app.graylog.publisher
-            level: debug
         logdna:
             type: service
             id: app.logdna.handler
