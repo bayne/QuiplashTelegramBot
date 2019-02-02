@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use AppBundle\Entity\Answer;
 use AppBundle\Entity\Exception\AlreadyInTheGameException;
+use AppBundle\Entity\Exception\GameAlreadyRunningException;
 use AppBundle\Entity\Exception\GameException;
 use AppBundle\Entity\Exception\NoAnswersForUserException;
 use Symfony\Component\Routing\Annotation\Route;
@@ -221,6 +222,11 @@ class QuiplashController extends Controller
             $this->getClient()->answerCallbackQuery(
                 $update->getCallbackQuery()->getId(),
                 'You are already in this game'
+            );
+        } catch (GameAlreadyRunningException $e) {
+            $this->getClient()->answerCallbackQuery(
+                $update->getCallbackQuery()->getId(),
+                'Stop it Danny, the game already started'
             );
         } catch (GameException $e) {
             $this->getClient()->answerCallbackQuery(

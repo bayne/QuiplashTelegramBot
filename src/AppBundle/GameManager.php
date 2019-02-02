@@ -6,6 +6,7 @@ use AppBundle\Entity\Answer;
 use AppBundle\Entity\Exception\AlreadyInTheGameException;
 use AppBundle\Entity\Exception\CannotBeginGameException;
 use AppBundle\Entity\Exception\GameAlreadyExistsException;
+use AppBundle\Entity\Exception\GameAlreadyRunningException;
 use AppBundle\Entity\Exception\GameException;
 use AppBundle\Entity\Exception\NoAnswersForUserException;
 use AppBundle\Entity\Exception\NoGameRunningException;
@@ -133,6 +134,11 @@ class GameManager
         } else {
             throw new AlreadyInTheGameException();
         }
+
+        if ($game->getState() !== Game::GATHER_USERS) {
+            throw new GameAlreadyRunningException();
+        }
+
         return $game;
     }
 

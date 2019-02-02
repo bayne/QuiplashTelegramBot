@@ -1,0 +1,39 @@
+# For a quick start check out our HTTP Requests collection (Tools|HTTP Client|Open HTTP Requests Collection).
+#
+# Following HTTP Request Live Templates are available:
+# * 'gtrp' and 'gtr' create a GET request with or without query parameters;
+# * 'ptr' and 'ptrp' create a POST request with a simple or parameter-like body;
+# * 'mptr' and 'fptr' create a POST request to submit a form with a text or file field (multipart/form-data);
+
+POST http://dev2.internal.southroute.com:8000/telegram/quiplash
+
+{
+  "update_id": 986433489,
+  "message": {
+    "message_id": 4314,
+    "from": {
+      "id": 189409671,
+      "is_bot": false,
+      "first_name": "Brian",
+      "last_name": "Payne",
+      "language_code": "en"
+    },
+    "date": 1548965676,
+    "chat": {
+      "id": -252046419,
+      "type": "group",
+      "title": "Funraisins",
+      "all_members_are_administrators": true
+    },
+    "text": "\/status@QuiplashModeratorBot",
+    "entities": [
+      {
+        "offset": 0,
+        "length": 28,
+        "type": "bot_command"
+      }
+    ]
+  }
+}
+
+###

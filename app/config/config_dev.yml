@@ -48,8 +48,12 @@ twig:
 # Doctrine Configuration
 doctrine:
     dbal:
-        driver: pdo_sqlite
-        path: "%kernel.project_dir%/var/data/data_dev.sqlite"
+        driver: pdo_mysql
+        host: '%database_host%'
+        port: '%database_port%'
+        dbname: '%database_name%'
+        user: '%database_user%'
+        password: '%database_password%'
         charset: UTF8
 
     orm:
@@ -59,6 +63,10 @@ doctrine:
 
 monolog:
     handlers:
+        main:
+            type: stream
+            path: "%kernel.logs_dir%/%kernel.environment%.log"
+            level: debug
         console:
             type: console
             process_psr_3_messages: false
