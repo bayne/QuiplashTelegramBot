@@ -134,6 +134,29 @@ class QuiplashController extends Controller
 
     /**
      * @Route(
+     *     name="start_command",
+     *     path="/telegram/quiplash",
+     *     methods={"POST"},
+     *     condition="request.attributes.get('text') matches '<^/start>'"
+     * )
+     *
+     * @param Update $update
+     * @return Response
+     */
+    public function startAction(Update $update)
+    {
+        $this->getClient()->sendMessage(
+            $update->getMessage()->getChat()->getId(),
+            <<<MESSAGE
+Add this bot to a group chat and send /new@QuiplashModeratorBot to start a new game in the chat!
+MESSAGE
+        );
+
+        return new Response();
+    }
+
+    /**
+     * @Route(
      *     name="new_game_command",
      *     path="/telegram/quiplash",
      *     methods={"POST"},
