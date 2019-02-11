@@ -128,15 +128,15 @@ class GameManager
         /** @var Game $game */
         $game = reset($games);
 
+        if ($game->getState() !== Game::GATHER_USERS) {
+            throw new GameAlreadyRunningException();
+        }
+
         if (false === $game->getUsers()->contains($user)) {
             $game->getUsers()->add($user);
             $this->gameRepository->updateGame($game);
         } else {
             throw new AlreadyInTheGameException();
-        }
-
-        if ($game->getState() !== Game::GATHER_USERS) {
-            throw new GameAlreadyRunningException();
         }
 
         return $game;
