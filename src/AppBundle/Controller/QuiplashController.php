@@ -7,6 +7,9 @@ use AppBundle\Entity\Exception\AlreadyInTheGameException;
 use AppBundle\Entity\Exception\GameAlreadyRunningException;
 use AppBundle\Entity\Exception\GameException;
 use AppBundle\Entity\Exception\NoAnswersForUserException;
+use Bayne\Telegram\Bot\Client;
+use Bayne\Telegram\Bot\ClientInterface;
+use Monolog\Logger;
 use Symfony\Component\Routing\Annotation\Route;
 use AppBundle\Entity\Exception\NoGameRunningException;
 use AppBundle\Entity\Exception\NotEnoughPlayersException;
@@ -440,7 +443,15 @@ MESSAGE
         $game = $this->getGameManager()->getCurrentGame($update->getCallbackQuery()->getMessage()->getChat()->getId());
         $answers = $game->getAnswersForCurrentQuestion();
         if (false === key_exists($choice, $answers)) {
-            throw new \RuntimeException('Invalid key for answer '.$choice.' '.json_encode(array_keys($answers)));
+            $this->getClient()->answerCallbackQuery(
+                $update->getCallbackQuery()->getId(),
+                'This question isn\'t being voted on currently'
+            );
+            $this->getLogger()->warning("Mismatched vote", [
+                'choice' => $choice,
+                'answers' => \json_encode($answers)
+            ]);
+            return new Response();
         }
         $answer = $answers[$choice];
 
