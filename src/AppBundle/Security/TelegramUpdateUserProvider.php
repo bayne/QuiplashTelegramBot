@@ -51,13 +51,23 @@ class TelegramUpdateUserProvider implements UserProviderInterface
         /** @var User $from */
         $from = $this->requestStack->getCurrentRequest()->get('from');
 
-        $user = new User(
-            $from->getId(),
-            $from->getIsBot(),
-            $from->getFirstName(),
-            $from->getLastName(),
-            $from->getUsername() ?: $from->getId()
-        );
+        $user = $this->entityManager->find(User::class, $from->getId());
+
+        if ($user === null) {
+            $user = new User(
+                $from->getId(),
+                $from->getIsBot(),
+                $from->getFirstName(),
+                $from->getLastName(),
+                $from->getUsername() ?: $from->getId()
+            );
+        } else {
+            $user
+                ->setUsername($from->getUsername() ?: $from->getId())
+                ->setFirstName($from->getFirstName())
+                ->setLastName($from->getLastName())
+            ;
+        }
 
         $this->entityManager->persist($user);
         $this->entityManager->flush();
