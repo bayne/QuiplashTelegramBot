@@ -170,7 +170,7 @@ class User implements UserInterface
     /**
      * @return string
      */
-    public function getFirstName(): string
+    public function getFirstName(): ?string
     {
         return $this->firstName;
     }
@@ -178,7 +178,7 @@ class User implements UserInterface
     /**
      * @return string
      */
-    public function getLastName(): string
+    public function getLastName(): ?string
     {
         return $this->lastName;
     }
@@ -187,7 +187,7 @@ class User implements UserInterface
      * @param string $firstName
      * @return User
      */
-    public function setFirstName(string $firstName): User
+    public function setFirstName(string $firstName = null): User
     {
         $this->firstName = $firstName;
         return $this;
@@ -197,7 +197,7 @@ class User implements UserInterface
      * @param string $lastName
      * @return User
      */
-    public function setLastName(string $lastName): User
+    public function setLastName(string $lastName = null): User
     {
         $this->lastName = $lastName;
         return $this;
