@@ -121,9 +121,19 @@ class GameRepository extends \Doctrine\ORM\EntityRepository
         $this->_em->beginTransaction();
     }
 
+    public function setTransactionIsolationLevel($level)
+    {
+        $this->_em->getConnection()->setTransactionIsolation($level);
+    }
+
     public function commit()
     {
         $this->_em->commit();
+    }
+
+    public function rollback()
+    {
+        $this->_em->rollback();
     }
 
 

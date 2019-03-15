@@ -18,6 +18,7 @@ use AppBundle\Entity\Vote;
 use AppBundle\Repository\AnswerRepository;
 use AppBundle\Repository\GameRepository;
 use AppBundle\Repository\QuestionRepository;
+use Doctrine\DBAL\TransactionIsolationLevel;
 use Psr\Log\LoggerInterface;
 
 class GameManager
@@ -290,35 +291,46 @@ class GameManager
 
     public function heartbeatExpiredGames()
     {
+        $this->unlock();
         $games = $this->gameRepository->getAllActiveGames();
         $currentTime = new \DateTime();
         $expiredGames = [];
         /** @var Game $game */
         foreach ($games as $game) {
-            if ($game->isExpired($currentTime)) {
-                if ($game->getState() === Game::GATHER_USERS) {
-                    try {
-                        $this->beginGame($game->getChatGroup());
-                    } catch (NotEnoughPlayersException $e) {
-                        $this->endGameForGroup($game->getChatGroup());
+            try {
+                $this->gameRepository->beginTransaction();
+                $this->gameRepository->setTransactionIsolationLevel(TransactionIsolationLevel::SERIALIZABLE);
+                $game = $this->gameRepository->find($game);
+                if ($game->isExpired($currentTime)) {
+                    if ($game->getState() === Game::GATHER_USERS) {
+                        try {
+                            $this->beginGame($game->getChatGroup());
+                        } catch (NotEnoughPlayersException $e) {
+                            $this->endGameForGroup($game->getChatGroup());
+                        }
+                    } elseif ($game->getState() === Game::GATHER_ANSWERS) {
+                        /** @var Answer $pendingAnswer */
+                        foreach ($game->getPendingAnswers() as $pendingAnswer) {
+                            $pendingAnswer->setResponse('(No Answer)');
+                            $this->answerRepository->updateAnswer($pendingAnswer);
+                        }
+                        $this->beginVoting($game);
+                    } elseif ($game->getState() === Game::GATHER_VOTES) {
+                        $this->advanceGame($game);
+                    } elseif ($game->getState() === Game::END) {
+                        throw new \RuntimeException('Heartbeat should not be called on ended games');
+                    } else {
+                        throw new \RuntimeException('Unknown state');
                     }
-                } elseif ($game->getState() === Game::GATHER_ANSWERS) {
-                    /** @var Answer $pendingAnswer */
-                    foreach ($game->getPendingAnswers() as $pendingAnswer) {
-                        $pendingAnswer->setResponse('(No Answer)');
-                        $this->answerRepository->updateAnswer($pendingAnswer);
-                    }
-                    $this->beginVoting($game);
-                } elseif ($game->getState() === Game::GATHER_VOTES) {
-                    $this->advanceGame($game);
-                } elseif ($game->getState() === Game::END) {
-                    throw new \RuntimeException('Heartbeat should not be called on ended games');
-                } else {
-                    throw new \RuntimeException('Unknown state');
+                    $this->gameRepository->updateGame($game);
+                    $expiredGames[] = $game;
                 }
-                $this->gameRepository->updateGame($game);
-                $expiredGames[] = $game;
+            } catch (\Exception $e) {
+                $this->logger->error("Heartbeat failed", ["exception" => (string) $e]);
+                $this->gameRepository->rollback();
+                continue;
             }
+            $this->gameRepository->commit();
         }
 
         return $expiredGames;
