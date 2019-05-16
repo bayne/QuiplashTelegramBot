@@ -15,12 +15,19 @@ services:
             - '%logdna_token%'
             - 'quiplash_telegram_bot'
 
+rollbar:
+    access_token: '%rollbar_token%'
+    environment: production
+
 monolog:
     handlers:
         logdna:
             type: service
             id: app.logdna.handler
             channels: ['app']
+        rollbar:
+            type: service
+            id: Rollbar\Monolog\Handler\RollbarHandler
         main:
             type: error_log
             level: debug
