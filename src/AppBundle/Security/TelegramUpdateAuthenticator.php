@@ -37,7 +37,7 @@ class TelegramUpdateAuthenticator extends AbstractGuardAuthenticator
      */
     public function start(Request $request, AuthenticationException $authException = null)
     {
-        return new Response('Missing user identifier', 401);
+        return new Response('Missing user identifier', 200);
     }
 
     /**
