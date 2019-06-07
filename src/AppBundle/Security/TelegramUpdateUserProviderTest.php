@@ -2,7 +2,7 @@
 
 namespace AppBundle\Security;
 
-use Bayne\Telegram\Bot\Object\User;
+use Bayne\Telegram\Bot\Type\User;
 use Doctrine\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;

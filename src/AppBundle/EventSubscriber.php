@@ -4,7 +4,7 @@ namespace AppBundle;
 
 
 use Bayne\Serializer\Normalizer\GetSetExcludeNormalizer;
-use Bayne\Telegram\Bot\Object\Update;
+use Bayne\Telegram\Bot\Type\Update;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;

@@ -69,7 +69,7 @@ class TelegramUpdateAuthenticator extends AbstractGuardAuthenticator
     public function getCredentials(Request $request)
     {
         if ($request->attributes->has('from')) {
-            /** @var Object\User $from */
+            /** @var Type\User $from */
             $from = $request->get('from');
 
             return $from;
@@ -85,7 +85,7 @@ class TelegramUpdateAuthenticator extends AbstractGuardAuthenticator
      * You may throw an AuthenticationException if you wish. If you return
      * null, then a UsernameNotFoundException is thrown for you.
      *
-     * @param Object\User $credentials
+     * @param Type\User $credentials
      * @param UserProviderInterface $userProvider
      *
      * @throws AuthenticationException
@@ -106,7 +106,7 @@ class TelegramUpdateAuthenticator extends AbstractGuardAuthenticator
      *
      * The *credentials* are the return value from getCredentials()
      *
-     * @param Object\User $credentials
+     * @param Type\User $credentials
      * @param UserInterface $user
      *
      * @return bool

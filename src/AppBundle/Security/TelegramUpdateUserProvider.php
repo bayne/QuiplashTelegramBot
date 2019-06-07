@@ -3,7 +3,7 @@
 namespace AppBundle\Security;
 
 use AppBundle\Entity\User;
-use Bayne\Telegram\Bot\Object\Update;
+use Bayne\Telegram\Bot\Type\Update;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;

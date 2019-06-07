@@ -3,11 +3,11 @@
 namespace AppBundle;
 
 use Bayne\Serializer\Normalizer\GetSetExcludeNormalizer;
-use Bayne\Telegram\Bot\Object\CallbackQuery;
-use Bayne\Telegram\Bot\Object\Chat;
-use Bayne\Telegram\Bot\Object\Message;
-use Bayne\Telegram\Bot\Object\Update;
-use Bayne\Telegram\Bot\Object\User;
+use Bayne\Telegram\Bot\Type\CallbackQuery;
+use Bayne\Telegram\Bot\Type\Chat;
+use Bayne\Telegram\Bot\Type\Message;
+use Bayne\Telegram\Bot\Type\Update;
+use Bayne\Telegram\Bot\Type\User;
 use Doctrine\ORM\EntityManager;
 use Symfony\Bundle\FrameworkBundle\Client;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
