@@ -1,17 +1,12 @@
-/.web-server-pid
-/app/config/parameters.yml
-/build/
-/phpunit.xml
-/var/*
-!/var/cache
-/var/cache/*
-!var/cache/.gitkeep
-!/var/logs
-/var/logs/*
-!var/logs/.gitkeep
-!/var/sessions
-/var/sessions/*
-!var/sessions/.gitkeep
-!var/SymfonyRequirements.php
 /vendor/
 /web/bundles/
+.idea
+
+telegram_token
+certbot/quiplash-dev.json
+certbot/quiplash-prod.json
+postgres/postgres_password
+
+#Added by cargo
+
+/target

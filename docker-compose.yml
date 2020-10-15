@@ -1,0 +1,95 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    entrypoint: 
+      - "./entrypoint.sh"
+    env_file:
+      - app.prod.env
+    secrets:
+      - telegram_token
+      - postgres_password
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  dyndns:
+    restart: unless-stopped
+    build:
+      context: dyndns
+      dockerfile: Dockerfile
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: '/run/secrets/cloud_dns'
+    secrets:
+      - cloud_dns
+
+  certbot:
+    restart: unless-stopped
+    secrets:
+      - cloud_dns
+    build:
+      context: certbot
+      dockerfile: Dockerfile
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot:/var/lib/letsencrypt
+
+  dozzle:
+    container_name: dozzle
+    image: amir20/dozzle:latest
+    environment:
+      DOZZLE_BASE: /dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  nginx:
+    build:
+      context: nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+    depends_on:
+      - app
+      - dozzle
+      - certbot
+    secrets:
+      - source: logs_htpasswd
+        uid: '101'
+        gid: '101'
+        mode: 0440
+    ports:
+      - '443:443'
+
+  postgres:
+    build:
+      context: postgres
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - pg-data:/data/postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports: 
+      - 5432:5432
+
+volumes:
+  pg-data:
+  certbot-certs:
+  certbot:
+
+secrets:
+  telegram_token:
+    file: ${SECRETS_PATH:?}/telegram_token
+  postgres_password:
+    file: ${SECRETS_PATH:?}/postgres_password
+  cloud_dns:
+    file: ${SECRETS_PATH:?}/quiplash-dev.json
+  logs_htpasswd:
+    file: ${SECRETS_PATH:?}/logs_htpasswd

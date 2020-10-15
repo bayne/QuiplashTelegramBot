@@ -1,0 +1,14 @@
+.idea*
+app*
+bin*
+migrate*
+var*
+deps*
+web*
+target*
+Dockerfile
+docker*
+docker-compose*
+phpunit.xml.dist
+README.md
+.cargo*

@@ -1,0 +1,123 @@
+GET https://api.telegram.org/bot{{token}}/getUpdates
+
+###
+
+GET https://api.telegram.org/bot{{token}}/getWebhook
+Content-Type: application/x-www-form-urlencoded
+
+###
+
+POST https://api.telegram.org/bot{{token}}/setWebhook
+Content-Type: application/x-www-form-urlencoded
+
+url=https://quiplash.telegram.southroute.dev/webhook
+
+###
+
+
+POST https://api.telegram.org/bot{{token}}/deleteWebhook
+Content-Type: application/x-www-form-urlencoded
+
+drop_pending_updates=true
+
+###
+
+
+POST http://localhost:7878
+Content-Type: application/json
+
+{
+  "message": {
+    "from": {
+      "id": 1,
+      "is_bot": false,
+      "first_name": "test",
+      "last_name": "hi",
+      "username": "b"
+    },
+    "chat": {
+      "id": "1"
+    },
+    "text": "/new "
+  }
+}
+
+###
+
+POST https://api.telegram.org/bot{{token}}/answerCallbackQuery HTTP/1.1
+Host: api.telegram.org
+Connection: close
+Accept-Encoding: identity
+
+chatId=\"1\"&text=\"Cannot start a new game, game already exists. Type /end to end current the game\"
+
+###
+
+POST https://api.telegram.org/bot{{token}}/sendMessage
+Accept-Encoding: identity
+Content-Type: application/x-www-form-urlencoded
+
+chat_id=189409671&text=Add this bot to a group chat and send /new@QuiplashModeratorBot to start a new game in the chat!
+
+###
+
+POST https://api.telegram.org/bot{{token}}/sendMessage HTTP/1.1
+Host: api.telegram.org
+Connection: close
+Content-Type: application/json
+Accept-Encoding: identity
+
+{
+  "chat_id": 189409671,
+  "text": "Click the Join button below \\nOnce everyone has joined, then type /begin to start the game\\nPlayers:\\nBrian"
+}
+
+###
+
+POST https://api.telegram.org/bot{{token}}/sendMessage HTTP/1.1
+Host: api.telegram.org
+Connection: close
+Content-Type: application/json
+Accept-Encoding: identity
+
+{"chat_id":"-359404575","text":"Cannot start a new game, game already exists. Type /end to end current the game"}
+
+###
+
+POST http://localhost:8081/app
+Content-Type: application/json
+
+{}
+
+###
+
+POST http://localhost:8000/app?group_id=1&token=u2q1
+Content-Type: application/json
+
+{
+  "answer": "abc"
+}
+
+###
+
+GET http://localhost:8000/app?group_id=1&token=u2q1
+Content-Type: application/json
+
+###
+
+POST http://localhost:8000/webhook
+Content-Type: application/json
+
+{
+  "message": {
+    "id": 1,
+    "text": "/begin",
+    "chat": {
+      "id": -1001130073327
+    },
+    "from": {
+      "id": 189409671,
+      "is_bot": false
+    }
+  }
+}

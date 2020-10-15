@@ -1,0 +1,8 @@
+- fix sigterm for app from docker
+- 1 pid for app
+- add response logs sent by server
+- implement question shuffle
+- handle string to int conversions
+- add token to webhook path
+- cause panic to shutdown main thread
+- remember secrets are *also* on pi (telegram token)

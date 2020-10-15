@@ -1,0 +1,11 @@
+{
+  "domains": {
+    "quiplash.telegram.southroute.dev": {
+      "provider": "gcp",
+      "provider_config": {
+        "project_id": "quiplash-dev",
+        "managed_zone": "quiplash-telegram-southroute-dev"
+      }
+    }
+  }
+}
